@@ -7,7 +7,7 @@ Fast GPU-based hash cracking for Helldivers 2, optimized for file paths.
 
 ## Pattern language
 ### Syntax
-- strings without any special characters are parsed as strings (prefix any special character with `\` to treat it like a non-special character)
+- strings without any special characters are parsed as strings (prefix any special character with `\` escape)
 - `<`, `>`: group inner contents together (works like parentheses)
 - `<a><b>` or `a<b>` etc.: concatenate a and b
 - `a|b|c`: a or b or c
@@ -18,6 +18,12 @@ Fast GPU-based hash cracking for Helldivers 2, optimized for file paths.
 - `#{var = ...}`: assign value of ... to variable `var`
 - `#{var}`: expand value of variable `var`
 - `#{func arg1 arg2 ...}`: call function with arguments `arg1`, `arg2` etc.
+    - string/regex arguments are parsed differently from expression arguments
+        - in string/regex arguments, only the characters `\`, `{`, `}`, space and tab need to be escaped
+            - balanced braces [`{}`] don't need to be escaped
+        - `\` does not need to be escaped if succeeded by a non-special character (e.g. `\w`, `\+` works in regex)
+        - you may also surround an argument with single or double quotes (`'abc'` or `"abc"`), which makes it so only quotes and `\` need to be escaped
+        - this makes it so you can call a function like `#{filter x \w{1,3}}` without the need for crazy escaping
 - operator precedences:
     - `|` binds weakest
     - concatenation binds stronger than `|`

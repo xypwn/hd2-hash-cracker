@@ -88,6 +88,33 @@ func TestParse(t *testing.T) {
 		{"empty string 5", "#{produce-empty-str}|a",
 			IrSegmentChoice{IrSegmentStr(""), IrSegmentStr("a")},
 			""},
+		{"escape sequences 1", `\{\}\|\<\>\\\//abc\w`,
+			IrSegmentStr(`{}|<>\//abc\w`),
+			""},
+		{"escape sequences 2", `#{echo \w+|abc{1}\\\\}`,
+			IrSegmentStr(`\w+|abc{1}\\`),
+			""},
+		{"escape sequences 3", `#{echo "\w\"{xy"}`,
+			IrSegmentStr(`\w"{xy`),
+			""},
+		{"comment 1", "//abc\nxyz",
+			IrSegmentStr(`xyz`),
+			""},
+		{"comment 2", "/*abc*/\nxyz",
+			IrSegmentStr(`xyz`),
+			""},
+		{"comment 3", "xyz//abc",
+			IrSegmentStr(`xyz`),
+			""},
+		{"comment crlf", "//abc\r\nxyz",
+			IrSegmentStr(`xyz`),
+			""},
+		{"comment escaped 1", `\//`,
+			IrSegmentStr(`//`),
+			""},
+		{"comment escaped 2", `\/*abc*/`,
+			IrSegmentStr(`/*abc*/`),
+			""},
 	}
 	funcs := map[string]any{
 		"produce-nil": func() IrSegment {
@@ -95,6 +122,9 @@ func TestParse(t *testing.T) {
 		},
 		"produce-empty-str": func() IrSegment {
 			return IrSegmentStr("")
+		},
+		"echo": func(s string) IrSegmentStr {
+			return IrSegmentStr(s)
 		},
 	}
 	for _, c := range cases {

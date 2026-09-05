@@ -342,22 +342,39 @@ func (p *parser) skipWhitespace() {
 	}
 }
 
+func (p *parser) parseEscapeSequence(escapableChars string) string {
+	c := p.next()
+	if c == 0 {
+		p.expectLast("")
+	}
+	if strings.IndexByte(escapableChars, c) != -1 {
+		return string(c)
+	}
+	return string([]byte{'\\', c})
+}
+
 // Parses a function parameter string.
 func (p *parser) parseString() string {
 	var s strings.Builder
 	parseUnquoted := func() {
+		braceLvl := 0
 		for {
 			c := p.next()
 			if c == 0 {
 				p.expectLast("")
-			} else if c == ' ' || c == '\t' || c == '}' {
+			} else if c == '{' {
+				braceLvl++
+				s.WriteByte(c)
+			} else if c == '}' {
+				if braceLvl == 0 {
+					break
+				}
+				braceLvl--
+				s.WriteByte(c)
+			} else if c == ' ' || c == '\t' {
 				break
 			} else if c == '\\' {
-				c1 := p.next()
-				if c1 == 0 {
-					p.expectLast("")
-				}
-				s.WriteByte(c1)
+				s.WriteString(p.parseEscapeSequence(" \t{}\\"))
 			} else {
 				s.WriteByte(c)
 			}
@@ -373,11 +390,7 @@ func (p *parser) parseString() string {
 				p.expectLast(" \t}")
 				break
 			} else if c == '\\' {
-				c1 := p.next()
-				if c1 == 0 {
-					p.expectLast("")
-				}
-				s.WriteByte(c1)
+				s.WriteString(p.parseEscapeSequence("\"'\\"))
 			} else {
 				s.WriteByte(c)
 			}
@@ -601,10 +614,54 @@ func (p *parser) parseHashExpr() IrSegment {
 			if len(vouts) == 2 && !vouts[1].IsNil() {
 				funcCallErr(vouts[1].Interface().(error))
 			}
-			if vouts[0].IsNil() {
+			if vouts[0].Kind() != reflect.String && vouts[0].IsNil() {
 				return nil
 			}
 			return vouts[0].Interface().(IrSegment)
+		}
+	}
+}
+
+func (p *parser) parseComment(blockComment bool) {
+	parseIfAtEOL := func() bool {
+		switch p.last() {
+		case 0, '\n':
+			return true
+		case '\r':
+			if p.next() == '\n' {
+				return true
+			}
+			p.unread()
+		}
+		return false
+	}
+	if blockComment {
+		for {
+			c := p.next()
+			switch c {
+			case 0:
+				p.expectLast("")
+			case '*':
+				c1 := p.next()
+				if c1 == 0 {
+					p.expectLast("")
+				}
+				if c1 == '/' {
+					// Skip newline after block comment if exists
+					p.next()
+					if !parseIfAtEOL() {
+						p.unread()
+					}
+					return
+				}
+			}
+		}
+	} else {
+		for {
+			p.next()
+			if parseIfAtEOL() {
+				return
+			}
 		}
 	}
 }
@@ -671,12 +728,19 @@ func (p *parser) parseExpr(endingDelims string) IrSegment {
 			break
 		}
 		switch c {
-		case '\\':
+		case '/':
 			c1 := p.next()
-			if c1 == 0 {
-				p.expectLast("")
+			switch c1 {
+			case '/':
+				p.parseComment(false)
+			case '*':
+				p.parseComment(true)
+			default:
+				segStr.WriteByte(c)
+				p.unread()
 			}
-			segStr.WriteByte(c1)
+		case '\\':
+			segStr.WriteString(p.parseEscapeSequence("#{}[]<>|/\\"))
 		case '|', '\n':
 			flushSegChoice()
 		case '<':
