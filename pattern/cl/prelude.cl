@@ -149,8 +149,10 @@ bool binary_search(hash_t hash, __global const hash_t *target_hashes) {
 // fully and the kernel function should exit.
 bool try(const u64 *s, u32 n, const size_t id, __global const u32 *hash_bitmap, __global const hash_t *target_hashes, __global char *matches, __global u32 *matches_lens) {
   hash_t h = HASH_FUNCTION(s, n);
+#ifndef DEBUG_ACCEPT_ALL_AS_MATCH
   if (!bitmap_test(h, hash_bitmap)) return true;
   if (!binary_search(h, target_hashes)) return true;
+#endif
   if (matches_lens[id]+n+1 > MAX_MATCH_BUF_LEN)
     return false;
   __global char *m = matches + id*MAX_MATCH_BUF_LEN + matches_lens[id];

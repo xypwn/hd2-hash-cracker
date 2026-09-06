@@ -11,14 +11,34 @@ import (
 
 var Done = errors.New("cracker done")
 
+// Options meant for debugging and/or testing.
+// You probably don't need to touch these.
+type DebugOptions struct {
+	// Treat any guess as valid. Used for testing
+	// index synchronization.
+	AcceptAllAsMatch bool
+	// Set to start at a candidate that isn't the first.
+	InitialTotalIdx int
+}
+
 // Advanced options for the cracker.
 //
 // Any zeroed field will be treated as if set to
 // its default value.
 type Options struct {
-	Workers        int // default 4096
-	MinMatchBufLen int // default 128
-	Tries          int // default 65536
+	// Number of workers to run concurrently (default: 4096).
+	Workers int
+	// Minimum length of the match buffer per worker; determines
+	// how many matches can be output without returning early.
+	// The final match buffer length is guaranteed to be able
+	// to hold 2 maximum length candidates (default: 128).
+	MinMatchBufLen int
+	// Number of tries per worker per dispatch (default: 65536).
+	Tries int
+
+	// Options meant for debugging and/or testing.
+	// You probably don't need to touch these.
+	Debug DebugOptions
 }
 
 type Cracker struct {
@@ -56,6 +76,7 @@ func NewCracker(device cl.DeviceId, prog pattern.Segment, mode HashMode, targetH
 		prog:     prog,
 		idx:      prog.MakeIndex(),
 		opts:     opts,
+		totalIdx: opts.Debug.InitialTotalIdx,
 	}
 	defer func() {
 		if err != nil {
@@ -79,6 +100,9 @@ func NewCracker(device cl.DeviceId, prog pattern.Segment, mode HashMode, targetH
 	}
 
 	code := string(generateClCode(prog, c.bufs))
+	if opts.Debug.AcceptAllAsMatch {
+		code = "#define DEBUG_ACCEPT_ALL_AS_MATCH\n\n" + code
+	}
 	c.DebugInfo.OpenClCode = code
 	program, err := cl.CreateProgramWithSource(c.context, []string{code})
 	if err != nil {

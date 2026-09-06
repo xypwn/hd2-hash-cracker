@@ -52,8 +52,9 @@ func (m HashMode) Bits() int {
 // Returns the number of elements needed in the index
 // for the given program.
 func getSegmentIdxLen(s pattern.Segment) int {
-	n := len(s.Segs)
+	n := 0
 	for _, segs := range s.Segs {
+		n += 1
 		for _, seg := range segs {
 			n += getSegmentIdxLen(seg)
 		}
@@ -64,11 +65,9 @@ func getSegmentIdxLen(s pattern.Segment) int {
 // Reads the SegIdx into a flat array.
 func readIdx(dest []uint32, s pattern.Segment, idx pattern.SegIdx) int {
 	p := 0
-	for i := range len(idx.Idxs) {
+	for i, segs := range s.Segs {
 		dest[p] = uint32(idx.Idxs[i])
 		p++
-	}
-	for i, segs := range s.Segs {
 		if s.Comps[i] != len(s.Segs[i]) {
 			for j, seg := range segs {
 				p += readIdx(dest[p:], seg, idx.Segs[i][j])
@@ -540,13 +539,11 @@ func generateClCode(s pattern.Segment, bufs *clBuffers) (code []byte) {
 			cb.L("}")
 		} else { // Some union operand with more nesting exists
 			var fname string
+			var guessFnCb *codeBuilder
 			if idx == len(s.Segs)-1 {
 				fname = guessFn
 			} else {
-				fcb, name := pushGuessFn()
-				genCode(fcb, s, idx+1, guessFn)
-				popGuessFn(fcb)
-				fname = name
+				guessFnCb, fname = pushGuessFn()
 			}
 			cb.L("switch (i[%d]) {", cIdx)
 			for j, seg := range segs {
@@ -559,6 +556,10 @@ func generateClCode(s pattern.Segment, bufs *clBuffers) (code []byte) {
 				cb.L("}")
 			}
 			cb.L("}")
+			if guessFnCb != nil {
+				genCode(guessFnCb, s, idx+1, guessFn)
+				popGuessFn(guessFnCb)
+			}
 		}
 		if len(segs) != 1 {
 			cb.L("i[%d] = 0;", cIdx)
