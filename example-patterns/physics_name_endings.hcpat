@@ -1,0 +1,3 @@
+#{endings = #{replace #{suffixes #{physics-name-endings} /_} [/_]?(.*) $1}}
+#{pfxs = #{filter #{prefixes #{known} /_} ^(content|packages)/}}
+#{pfxs}[/_]<#{known-words}[/_]|>#{endings}

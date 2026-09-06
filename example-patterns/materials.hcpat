@@ -1,0 +1,15 @@
+// Gather bases of paths containing /materials/ and /textures/ (e.g. from content/effects/textures/liquid/drop_nrm,
+// we want to gather the content/effects/textures/liquid/drop part).
+#{base-mats-from-mats = #{replace #{filter #{known} /materials/} ^(.*/materials/.*)$ $1}}
+#{base-mats-from-texs = #{replace #{replace #{filter #{known} /textures/} ^(.*/textures/\w+)_\w+$ $1} ^(.*)_$ $1}}
+// Merge them together (replacing /textures/ with /materials/ so it's normalized).
+#{base-mats = #{merge #{base-mats-from-mats} #{replace #{base-mats-from-texs} /textures/ /materials/}}}
+// Remove any numerical suffixes, as we'll be guessing those anyway.
+#{base-mats = #{replace #{base-mats} _\d+$ ""}}
+// To the bases, we may want to append common words and numbers.
+// For textures, we also want to append specific texture suffixes (like _albedo, _emissive etc.).
+#{tex-in-between-suffixes = small|cloth|[0-9]{1,3}}
+#{texture-suffixes = #{wordlist texture_suffixes.txt}}
+// Do the actual guessing
+#{base-mats}<_#{tex-in-between-suffixes}|><_#{texture-suffixes}|>
+#{replace #{base-mats} /materials/ /textures/}<_#{tex-in-between-suffixes}|><_#{texture-suffixes}|>
