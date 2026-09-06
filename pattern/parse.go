@@ -494,12 +494,6 @@ func (p *parser) parseHashExpr() IrSegment {
 			if len(args) != 2 {
 				p.err(ErrTooManyArgsInAssignment)
 			}
-			if _, exists := p.vars[name]; exists {
-				p.err(fmt.Errorf("%w: %s", ErrVarOrFuncAlreadyExists, name))
-			}
-			if _, exists := p.funcs[name]; exists {
-				p.err(fmt.Errorf("%w: %s", ErrVarOrFuncAlreadyExists, name))
-			}
 			p.vars[name] = args[1].(IrSegment)
 			p.newVars = append(p.newVars, name)
 			return nil
@@ -559,7 +553,7 @@ func (p *parser) parseHashExpr() IrSegment {
 				funcCallErr(errors.New("file loading not available if fs is not passed"))
 			}
 			dir := path.Dir(p.filename)
-			filename := filepath.ToSlash(args[0].(string))
+			filename := filepath.ToSlash(filepath.Clean(args[0].(string)))
 			data, err := fs.ReadFile(p.fs, path.Join(dir, filename))
 			if err != nil {
 				funcCallErr(err)
@@ -582,7 +576,9 @@ func (p *parser) parseHashExpr() IrSegment {
 			case "import":
 				for _, vn := range p1.newVars {
 					if _, exists := p.vars[vn]; exists {
-						funcCallErr(fmt.Errorf("cannot import file %q: variable %s: %w", filename, vn, ErrVarOrFuncAlreadyExists))
+						// TODO: Do we warn the user if a variable is overwritten
+						// through an import?
+						//funcCallErr(fmt.Errorf("cannot import file %q: variable %s: %w", filename, vn, ErrFuncWithNameAlreadyExists))
 					}
 					p.vars[vn] = p1.vars[vn]
 					p.newVars = append(p.newVars, vn)
@@ -875,7 +871,7 @@ func parse(src []byte, filename string, fs fs.FS, extraVars map[string]IrSegment
 	p = &parser{
 		src:          src,
 		lineOffsets:  lineOffsets,
-		filename:     filepath.ToSlash(filename),
+		filename:     filepath.ToSlash(filepath.Clean(filename)),
 		fs:           fs,
 		initialFuncs: make(map[string]any),
 		initialVars:  make(map[string]IrSegment),

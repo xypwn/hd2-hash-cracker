@@ -359,7 +359,7 @@ func run() error {
 		patternFilename = "-"
 		patternSrc = []byte(*optInput)
 	} else {
-		b, err := fs.ReadFile(patternRootFs.FS(), *optInput)
+		b, err := fs.ReadFile(patternRootFs.FS(), filepath.ToSlash(filepath.Clean(*optInput)))
 		if err != nil {
 			return fmt.Errorf("reading input file: %w", err)
 		}
