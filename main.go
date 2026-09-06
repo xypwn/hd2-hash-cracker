@@ -10,6 +10,7 @@ import (
 	"math"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"runtime/pprof"
 	"slices"
@@ -45,7 +46,7 @@ type cracker struct {
 	// End           //
 }
 
-func runCracker(ctx context.Context, patternSrc []byte, patternFilename string, patternFs fs.FS, mode pcl.HashMode, targetHashes []uint64, writeClCode bool) (newHashes []string, err error) {
+func runCracker(ctx context.Context, patternSrc []byte, patternFilename string, patternFs fs.FS, mode pcl.HashMode, targetHashes []uint64, workersHint int, writeClCode bool) (newHashes []string, err error) {
 	c := &cracker{
 		ctx:       ctx,
 		newHashes: make(map[string]struct{}),
@@ -62,7 +63,7 @@ func runCracker(ctx context.Context, patternSrc []byte, patternFilename string, 
 	var workerErr error
 	done := make(chan error)
 	go func() {
-		done <- crack(c, prog, mode, targetHashes, writeClCode)
+		done <- crack(c, prog, mode, targetHashes, workersHint, writeClCode)
 		close(done)
 	}()
 
@@ -137,7 +138,7 @@ func (c *cracker) Status(format string, args ...any) {
 	c.mu.Unlock()
 }
 
-func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []uint64, writeClCode bool) error {
+func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []uint64, workersHint int, writeClCode bool) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -168,7 +169,7 @@ func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []u
 	c.Msg("Using OpenCL platform %q with device %q", platformName, deviceName)
 
 	crackerOpts := pcl.Options{
-		Workers: 256,
+		Workers: max(workersHint/2, 256),
 		Tries:   8192,
 	}
 	tuner := NewTuner(crackerOpts.Workers, crackerOpts.Tries)
@@ -303,6 +304,9 @@ func run() error {
 	optOutput := argp.String("o", "output", &argparse.Option{
 		Help: "output file to append found hashes to (default is cracked.txt for murmur64a, cracked_thin.txt for murmur64a thin, or cracked_datalib.txt for datalib hash)",
 	})
+	optWorkersHint := argp.Int("w", "workers", &argparse.Option{
+		Help: "hint to number of workers; increasing this to ~5000+/- may speed up the tuning process, but can also worsen performance significantly; very dependent on your system and pattern",
+	})
 	optCpuProfile := argp.Flag("", "debug-cpuprofile", &argparse.Option{
 		Help: "(debug) write CPU profile to file cpu.prof",
 	})
@@ -345,13 +349,13 @@ func run() error {
 		}()
 	}
 
-	wordDir, err := os.Getwd()
+	workDir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
 	var patternSrc []byte
 	var patternFilename string
-	patternRootFs, err := os.OpenRoot(wordDir)
+	patternRootFs, err := os.OpenRoot(workDir)
 	if err != nil {
 		return err
 	}
@@ -434,7 +438,7 @@ func run() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	newHashes, err := runCracker(ctx, patternSrc, patternFilename, patternRootFs.FS(), hashMode, targetHashes, *optWriteClCode)
+	newHashes, err := runCracker(ctx, patternSrc, patternFilename, patternRootFs.FS(), hashMode, targetHashes, *optWorkersHint, *optWriteClCode)
 	if err != nil {
 		return err
 	}

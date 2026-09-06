@@ -40,7 +40,6 @@ var (
 	ErrInvalidVarOrFuncNameChar       = errors.New("invalid variable or function name char (expected [A-Za-z0-9_-])")
 	ErrEmptyVarOrFuncName             = errors.New("empty variable or function name")
 	ErrTooManyArgsInAssignment        = errors.New("assignment needs exactly one parameter after \"=\"")
-	ErrVarOrFuncAlreadyExists         = errors.New("variable or function already exists")
 	ErrUnknownVarOrFunc               = errors.New("unknown variable or function")
 	ErrInvalidVarType                 = errors.New("invalid variable type")
 	ErrInvalidFuncType                = errors.New("invalid function type")
