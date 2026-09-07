@@ -10,7 +10,7 @@ import (
 
 func main() {
 	var out bytes.Buffer
-	stdSrc, err := os.ReadFile("std.pat")
+	stdSrc, err := os.ReadFile("std.hcpat")
 	if err != nil {
 		panic(err)
 	}
