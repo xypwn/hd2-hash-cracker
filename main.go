@@ -249,7 +249,7 @@ func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []u
 		allFound := len(c.newHashes) == len(targetHashes)
 		c.mu.Unlock()
 
-		if w, t, done, changed := tuner.Step(int(cr.LastKernelRunDuration().Nanoseconds()), newTries); changed {
+		if w, t, done, changed := tuner.Step(int(cr.LastComputeRunDuration().Nanoseconds()), newTries); changed {
 			var tuneStr string
 			if done {
 				tuneStr = "Tuned"

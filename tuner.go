@@ -58,9 +58,9 @@ func NewDummyTuner() *Tuner {
 }
 
 // Other return values are only valid if changed is true.
-func (t *Tuner) Step(kernelRunDurationNs int, totalHashesTried int) (newNumWorkers, newNumTries int, done, changed bool) {
+func (t *Tuner) Step(computeRunDurationNs int, totalHashesTried int) (newNumWorkers, newNumTries int, done, changed bool) {
 	if t.remainingWarmupNs > 0 {
-		t.remainingWarmupNs -= kernelRunDurationNs
+		t.remainingWarmupNs -= computeRunDurationNs
 		return
 	}
 
@@ -72,8 +72,8 @@ func (t *Tuner) Step(kernelRunDurationNs int, totalHashesTried int) (newNumWorke
 		if s.Collected {
 			return
 		}
-		s.Reports.Write(tunerSample{kernelRunDurationNs, totalHashesTried})
-		s.NsUntilCollected -= kernelRunDurationNs
+		s.Reports.Write(tunerSample{computeRunDurationNs, totalHashesTried})
+		s.NsUntilCollected -= computeRunDurationNs
 		if s.NsUntilCollected <= 0 {
 			// We have enough data now
 			{ // average ns per per try
@@ -91,8 +91,8 @@ func (t *Tuner) Step(kernelRunDurationNs int, totalHashesTried int) (newNumWorke
 
 	calcTries := func(workers int, avgNsPerTry float64) int {
 		avgSPerTry := avgNsPerTry / secondNs
-		targetKernelRunDuration := 0.2 // in seconds
-		return int(targetKernelRunDuration /
+		targetComputeRunDuration := 0.2 // in seconds
+		return int(targetComputeRunDuration /
 			(float64(workers) * avgSPerTry)) // time it takes for every worker to do 1 try
 	}
 

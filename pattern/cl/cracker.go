@@ -46,19 +46,27 @@ type Cracker struct {
 		OpenClCode string
 	}
 
+	// We can't immediately change workers or
+	// tries if we still rely on in-GPU data,
+	// so store the requested changes here
+	// until they can be realized.
 	newWorkers int
+	newTries   int
 
-	hashMode              HashMode
-	device                cl.DeviceId
-	context               cl.Context
-	queue                 cl.CommandQueue
-	kernel                cl.Kernel
-	opts                  Options
-	prog                  pattern.Segment
-	bufs                  *clBuffers
-	idx                   pattern.SegIdx
-	totalIdx              int
-	lastKernelRunDuration time.Duration
+	hashMode               HashMode
+	device                 cl.DeviceId
+	context                cl.Context
+	queue                  cl.CommandQueue
+	kernel                 cl.Kernel
+	opts                   Options
+	prog                   pattern.Segment
+	bufs                   *clBuffers
+	idx                    pattern.SegIdx
+	totalIdx               int
+	lastComputeRunDuration time.Duration
+
+	// Precomputed next indices
+	nextIdxsBuf []uint32
 }
 
 func NewCracker(device cl.DeviceId, prog pattern.Segment, mode HashMode, targetHashes []uint64, opts Options) (_ *Cracker, err error) {
@@ -72,11 +80,13 @@ func NewCracker(device cl.DeviceId, prog pattern.Segment, mode HashMode, targetH
 		opts.Tries = 65536
 	}
 	c := &Cracker{
-		hashMode: mode,
-		prog:     prog,
-		idx:      prog.MakeIndex(),
-		opts:     opts,
-		totalIdx: opts.Debug.InitialTotalIdx,
+		newWorkers: opts.Workers,
+		newTries:   opts.Tries,
+		hashMode:   mode,
+		prog:       prog,
+		idx:        prog.MakeIndex(),
+		opts:       opts,
+		totalIdx:   opts.Debug.InitialTotalIdx,
 	}
 	defer func() {
 		if err != nil {
@@ -98,6 +108,7 @@ func NewCracker(device cl.DeviceId, prog pattern.Segment, mode HashMode, targetH
 	if err != nil {
 		return nil, fmt.Errorf("creating buffers: %w", err)
 	}
+	c.nextIdxsBuf = make([]uint32, c.bufs.idxLen*opts.Workers)
 
 	code := string(generateClCode(prog, c.bufs))
 	if opts.Debug.AcceptAllAsMatch {
@@ -128,6 +139,9 @@ func NewCracker(device cl.DeviceId, prog pattern.Segment, mode HashMode, targetH
 	if err != nil {
 		return nil, fmt.Errorf("creating command queue: %w", err)
 	}
+
+	c.fillNextIdxsBuf()
+
 	return c, nil
 }
 
@@ -173,8 +187,8 @@ func (c *Cracker) TotalIdx() int {
 	return c.totalIdx
 }
 
-func (c *Cracker) LastKernelRunDuration() time.Duration {
-	return c.lastKernelRunDuration
+func (c *Cracker) LastComputeRunDuration() time.Duration {
+	return c.lastComputeRunDuration
 }
 
 // Will be realized once no matches were found in the previous dispatch.
@@ -183,7 +197,32 @@ func (c *Cracker) ChangeNumWorkers(newNumWorkers int) {
 }
 
 func (c *Cracker) ChangeNumTries(newNumTries int) {
-	c.opts.Tries = newNumTries
+	c.newTries = newNumTries
+}
+
+// Fills the [nextIdxsBuf] buffer with the hypothetical indices for the
+// next dispatch, if the number of tries remains the same and all tries
+// were fully exhausted last dispatch (the most common case).
+//
+// It makes sense to pre-calculate the next indices while the kernel
+// runs on the GPU.
+func (c *Cracker) fillNextIdxsBuf() {
+	c.idx.Reset()
+	if c.totalIdx > 0 {
+		// Note that addition may overflow here, but that's
+		// fine since we'll be setting the tries to zero
+		// if the total index goes past the limit.
+		c.idx.Add(c.prog, c.totalIdx)
+	}
+	for i := range c.opts.Workers {
+		n := readIdx(c.nextIdxsBuf[i*c.bufs.idxLen:], c.prog, c.idx)
+		if n != c.bufs.idxLen {
+			panic("expected number of index elements read to be equal to index length")
+		}
+		if i != c.opts.Workers-1 {
+			c.idx.Add(c.prog, c.opts.Tries)
+		}
+	}
 }
 
 // Dispatch dispatches a single batch of workers.
@@ -196,62 +235,100 @@ func (c *Cracker) Dispatch() (matches []string, err error) {
 	{
 		matchFound := c.bufs.bs.matchFound.Items[0] != 0
 
-		// Resize buffer if requested and no match was found
-		// (otherwise we would falsely zero all fields in the
-		// tries and matchesLens buffers).
-		if c.newWorkers != 0 && c.newWorkers != c.opts.Workers && !matchFound {
-			if err := c.bufs.ResizeToWorkers(c.context, c.queue, c.newWorkers); err != nil {
-				return nil, err
+		// We only update the workers if no match was found, as we would otherwise falsely
+		// zero all fields in the tries and matchesLens buffers.
+		//
+		// This also applies to tries for convenience (we expect most dispatches to have 0 matches
+		// anyway).
+		if !matchFound {
+			updateWorkers := c.newWorkers != c.opts.Workers
+			updateTries := c.newTries != c.opts.Tries
+			if updateWorkers {
+				if err := c.bufs.ResizeToWorkers(c.context, c.queue, c.newWorkers); err != nil {
+					return nil, err
+				}
+
+				if c.newWorkers > c.opts.Workers {
+					c.nextIdxsBuf = append(c.nextIdxsBuf, make([]uint32, (c.newWorkers-c.opts.Workers)*c.bufs.idxLen)...) // this expression should only reallocate up to once
+				} else if c.newWorkers < c.opts.Workers {
+					c.nextIdxsBuf = c.nextIdxsBuf[:c.newWorkers*c.bufs.idxLen]
+				}
 			}
 			c.opts.Workers = c.newWorkers
-			if err := c.setKernelArgValues(); err != nil {
-				return nil, err
+			c.opts.Tries = c.newTries
+			if updateWorkers {
+				// Buffers have been reallocated, so set them as args again
+				if err := c.setKernelArgValues(); err != nil {
+					return nil, err
+				}
+			}
+			if updateTries || updateWorkers {
+				// Next idxs are no longer valid, so fully recompute them
+				c.fillNextIdxsBuf()
 			}
 		}
 
-		fillTries := true
-		done := true
-		for i := range c.bufs.numWorkers {
-			if matchFound && // tries is only valid if a match was found
-				c.bufs.bs.tries.Items[i] != 0 {
-				// Worker stopped early because result
-				// buffer was full.
-				done = false
-				fillTries = false
-				continue
-			}
-			c.idx.Reset()
-			if c.totalIdx > 0 {
-				c.idx.Add(c.prog, c.totalIdx)
-			}
-			readIdx(c.bufs.bs.idxs.Items[i*c.bufs.idxLen:], c.prog, c.idx)
-			tries := c.opts.Tries
-			if c.totalIdx+tries > c.prog.Comp {
-				tries = c.prog.Comp - c.totalIdx
-				fillTries = false
-			}
-			c.bufs.bs.tries.Items[i] = uint32(tries)
-			c.totalIdx += tries
-			if tries > 0 {
-				done = false
-			}
-		}
-		if done {
+		if !matchFound && c.totalIdx >= c.prog.Comp {
+			// No match was found and we're past the last
+			// element in the program => we're done.
+			//
+			// We could also be done despite a match being
+			// found, but wasting an extra dispatch makes
+			// the code cleaner and doesn't really matter
+			// much for user experience.
 			return nil, Done
 		}
+
+		// If no match was found, we know no worker could have stopped early.
+		// If we also know we won't reach the end of the pattern this dispatch,
+		// we can simply use our precomputed indices verbatim and set the tries
+		// for each worker to the same value.
+		fillTriesAndUsePrecomputedIdxs := !matchFound && c.totalIdx+c.opts.Tries*c.bufs.numWorkers < c.prog.Comp
+		if fillTriesAndUsePrecomputedIdxs {
+			c.totalIdx += c.opts.Tries * c.bufs.numWorkers
+		} else {
+			precompIdxsIdx := 0
+			for i := range c.bufs.numWorkers {
+				if matchFound && // tries is only valid if a match was found
+					c.bufs.bs.tries.Items[i] != 0 {
+					// Worker stopped early because result
+					// buffer was full. Let it continue
+					// where it left off.
+					continue
+				}
+
+				// Pull out a new precomputed index
+				copy(c.bufs.bs.idxs.Items[i*c.bufs.idxLen:],
+					c.nextIdxsBuf[precompIdxsIdx*c.bufs.idxLen:precompIdxsIdx*c.bufs.idxLen+c.bufs.idxLen])
+				precompIdxsIdx++
+
+				tries := c.opts.Tries
+				if c.totalIdx+tries > c.prog.Comp {
+					tries = c.prog.Comp - c.totalIdx
+				}
+
+				c.bufs.bs.tries.Items[i] = uint32(tries)
+				c.totalIdx += tries
+			}
+		}
+
 		c.bufs.bs.matchFound.Items[0] = 0
-		//fmt.Println("tries:", c.bufs.data.tries)
-		//fmt.Println("matches:", c.bufs.data.matchesLens)
-		triesFillValue := 0 // read from host buffer (don't just fill)
-		if fillTries {
-			// faster: fill all tries with the same value
+		var triesFillValue int
+		var altIdxsBuffer []uint32
+		if fillTriesAndUsePrecomputedIdxs {
+			// Fast path: Fill all tries with the same value
+			// and shortcut to use all the precomputed indices.
 			triesFillValue = c.opts.Tries
+			altIdxsBuffer = c.nextIdxsBuf
 		}
 		if err := c.bufs.write(c.queue,
 			// If the tries buffer has the same value every
 			// where, we just fill by pattern instead of
 			// copying byte-by-byte.
 			uint32(triesFillValue),
+			// If non-nil: We're able to use the pre-computed
+			// indices verbatim.
+			altIdxsBuffer,
 			// If no match was found, we know matchLens is
 			// still zero everywhere, and hence there's no
 			// reason to zero matchLens.
@@ -266,10 +343,16 @@ func (c *Cracker) Dispatch() (matches []string, err error) {
 	if err := cl.EnqueueNDRangeKernel(c.queue, c.kernel, 1, nil, []uint64{uint64(c.bufs.numWorkers)}, nil, nil, nil); err != nil {
 		return nil, fmt.Errorf("running kernel: %w", err)
 	}
+	if err := cl.Flush(c.queue); err != nil {
+		return nil, fmt.Errorf("flushing queue: %w", err)
+	}
+	// While the GPU is working, pre-calculate the next indices
+	c.fillNextIdxsBuf()
+	// Wait for GPU to finish
 	if err := cl.Finish(c.queue); err != nil {
 		return nil, fmt.Errorf("finishing queue: %w", err)
 	}
-	c.lastKernelRunDuration = time.Since(tStart)
+	c.lastComputeRunDuration = time.Since(tStart)
 
 	// Read back necessary data
 	{

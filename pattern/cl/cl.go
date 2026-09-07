@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"math"
+	"runtime"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -365,8 +366,11 @@ func (b *clBuffers) readTriesIdxsAndMatches(queue cl.CommandQueue) (err error) {
 	return
 }
 
-// pass 0 as triesFillValue to fill with buffer contents instead of fixed value
-func (b *clBuffers) write(queue cl.CommandQueue, triesFillValue uint32, zeroMatchesLens bool) error {
+// Pass 0 as triesFillValue to fill with buffer contents instead of fixed value.
+//
+// If altIdxsSourceBuffer is not nil, it will be used to fill the device indices
+// instead of the internal backed idxs buffer.
+func (b *clBuffers) write(queue cl.CommandQueue, triesFillValue uint32, altIdxsSourceBuffer []uint32, zeroMatchesLens bool) error {
 	if triesFillValue == 0 {
 		if err := b.bs.tries.EnqueueWrite(queue, false, 0, -1, nil, nil); err != nil {
 			return err
@@ -376,8 +380,20 @@ func (b *clBuffers) write(queue cl.CommandQueue, triesFillValue uint32, zeroMatc
 			return err
 		}
 	}
-	if err := b.bs.idxs.EnqueueWrite(queue, false, 0, -1, nil, nil); err != nil {
-		return err
+	if altIdxsSourceBuffer != nil {
+		// Needed since altIdxsSourceBuffer needs to live longer than the EnqueueWrite call
+		// (until cl.Finish) and we're not using blocking_write.
+		var pin runtime.Pinner
+		defer pin.Unpin()
+		pin.Pin(&altIdxsSourceBuffer[0])
+
+		if err := cl.EnqueueWriteBufferSlice(queue, b.bs.idxs.Mem, false, 0, altIdxsSourceBuffer, nil, nil); err != nil {
+			return err
+		}
+	} else {
+		if err := b.bs.idxs.EnqueueWrite(queue, false, 0, -1, nil, nil); err != nil {
+			return err
+		}
 	}
 	if err := b.bs.matchFound.EnqueueWrite(queue, false, 0, -1, nil, nil); err != nil {
 		return err
