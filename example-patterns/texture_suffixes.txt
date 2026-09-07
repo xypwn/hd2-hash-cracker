@@ -4,6 +4,8 @@ albedo
 albedo_graded
 array
 base_color
+bci
+ccras
 cfd
 color
 data
@@ -26,6 +28,7 @@ nms
 normal
 nrm
 o
+sss
 strip
 strip_array
 tear

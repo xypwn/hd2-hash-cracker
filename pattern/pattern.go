@@ -364,103 +364,6 @@ func (s Segment) MaxLen() int {
 	return concatLen
 }
 
-// Reduces nesting and removes unnecessary operands.
-// May decrease complexity in the process (returns whether
-// complexity was actually changed).
-func (s *Segment) optimize() (compChanged bool) {
-	// Optimize inner segments first.
-	for i := range s.Segs {
-		for j := range s.Segs[i] {
-			if s.Segs[i][j].optimize() {
-				s.Comps = nil
-				s.Comp = 0
-				s.calculateComps()
-				compChanged = true
-			}
-		}
-	}
-
-	// Union element that only yields empty string should be replaced with empty segment
-	// (to fully flatten any nested empty strings).
-	{
-		prevComp := s.Comp
-		if s.MaxLen() == 0 {
-			*s = Segment{Type: SegmentProdOfSets, Comp: 1}
-			// e.g. <><|> becomes <> (remove redundant complexity)
-			compChanged = compChanged || s.Comp != prevComp
-			// In this case, we can no longer optimize this segment, so return early
-			return
-		}
-	}
-
-	// Cartesian product only yield one string should be flattened
-	// to that string.
-	if s.Comp == 1 {
-		*s = Segment{Type: SegmentText, Str: s.StringAt(s.MakeIndex()), Comp: 1}
-		// In this case, we can no longer optimize the segment, so return early
-		return
-	}
-
-	// Cartesian product element that only yields empty string can be removed.
-	cartProdElementMaxLen := func(s Segment, idx int) int {
-		maxLen := 0
-		for _, seg := range s.Segs[idx] {
-			maxLen = max(maxLen, seg.MaxLen())
-		}
-		return maxLen
-	}
-	{
-		prevComp := s.Comp
-		var newSegs [][]Segment
-		for i := range s.Segs {
-			if cartProdElementMaxLen(*s, i) > 0 {
-				newSegs = append(newSegs, s.Segs[i])
-			}
-		}
-		s.Segs = newSegs
-		// Complexity may have changed if expression was e.g. <|>
-		// (redundant empty string).
-		s.resetComps()
-		s.calculateComps()
-		compChanged = compChanged || s.Comp != prevComp
-	}
-
-	// Cartesian product of single-parameter unions
-	// of cartesian product can be flattened.
-	//
-	// Example:
-	// x(A, u(x(B, C)), u(x(D))) -> x(A, B, C, D)
-	if i := slices.IndexFunc(s.Segs, func(segs []Segment) bool {
-		return len(segs) == 1
-	}); i != -1 {
-		var newSegs [][]Segment
-		var newComps []int
-		for ; i < len(s.Segs); i++ {
-			if len(s.Segs[i]) == 1 && s.Segs[i][0].Type == SegmentProdOfSets {
-				newSegs = append(newSegs, s.Segs[i][0].Segs...)
-				newComps = append(newComps, s.Segs[i][0].Comps...)
-			} else {
-				newSegs = append(newSegs, s.Segs[i])
-				newComps = append(newComps, s.Comps[i])
-			}
-		}
-		s.Segs = newSegs
-		s.Comps = newComps
-	}
-
-	// Cartesian product with single parameter
-	// of union with single parameter can be
-	// flattened.
-	//
-	// Example:
-	// x(u(A)) -> A
-	if len(s.Segs) == 1 && len(s.Segs[0]) == 1 {
-		*s = s.Segs[0][0]
-	}
-
-	return
-}
-
 func compile(irSeg IrSegment, opts CompileOptions) Segment {
 	if irSeg == nil {
 		return Segment{}
@@ -549,7 +452,7 @@ func Compile(src []byte, filename string, fs fs.FS, opts CompileOptions) (prog S
 	seg := compile(irSeg, opts)
 	seg.calculateComps()
 	if !opts.NoOptimize {
-		seg.optimize()
+		seg.Optimize(builtinOptimizationPass)
 	}
 	if seg.Comp == math.MaxInt {
 		comp, _ := seg.CompBig(nil).Float64()

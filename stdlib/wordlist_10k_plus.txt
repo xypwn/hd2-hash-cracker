@@ -13,9 +13,12 @@ emissive
 env
 facet
 fuzz
+gen
 gloss
 glossiness
 gradient
+gui
+hud
 il
 index_of_refraction
 ior
@@ -37,6 +40,7 @@ subsurface_scattering
 textures
 translucency
 translucent
+ui
 wep
 
 // MIT 10k wordlist

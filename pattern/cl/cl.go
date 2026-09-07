@@ -524,10 +524,14 @@ func generateClCode(s pattern.Segment, bufs *clBuffers) (code []byte) {
 	var genCode func(cb *codeBuilder, s pattern.Segment, idx int, guessFn string)
 	genCode = func(cb *codeBuilder, s pattern.Segment, idx int, guessFn string) {
 		if (s.Type == pattern.SegmentText) || (s.Type == pattern.SegmentProdOfSets && len(s.Segs) == 0) {
-			cb.L("const u32 str_len = %d;", len(s.Str))
-			writeExprPushStr(cb, "memcpy_pc", quote(s.Str))
+			if len(s.Str) != 0 {
+				cb.L("const u32 str_len = %d;", len(s.Str))
+				writeExprPushStr(cb, "memcpy_pc", quote(s.Str))
+			}
 			writeExprCallGuessFn(cb, guessFn)
-			writeExprPopStr(cb)
+			if len(s.Str) != 0 {
+				writeExprPopStr(cb)
+			}
 			return
 		}
 
@@ -561,17 +565,23 @@ func generateClCode(s pattern.Segment, bufs *clBuffers) (code []byte) {
 			} else {
 				guessFnCb, fname = pushGuessFn()
 			}
-			cb.L("switch (i[%d]) {", cIdx)
-			for j, seg := range segs {
-				cb.L("case %d: {", j)
-				genCode(cb, seg, 0, fname)
-				if j != len(segs)-1 {
-					cb.L("i[%d]++;", cIdx)
-					cb.L("//fallthrough")
+			if len(segs) != 1 {
+				cb.L("switch (i[%d]) {", cIdx)
+				for j, seg := range segs {
+					cb.L("case %d: {", j)
+					genCode(cb, seg, 0, fname)
+					if j != len(segs)-1 {
+						cb.L("i[%d]++;", cIdx)
+						cb.L("//fallthrough")
+					}
+					cb.L("}")
 				}
 				cb.L("}")
+			} else {
+				cb.L("/*single-case switch (i[%d])*/ {", cIdx)
+				genCode(cb, segs[0], 0, fname)
+				cb.L("}")
 			}
-			cb.L("}")
 			if guessFnCb != nil {
 				genCode(guessFnCb, s, idx+1, guessFn)
 				popGuessFn(guessFnCb)
