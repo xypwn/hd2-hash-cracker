@@ -97,7 +97,7 @@ func NewCracker(device cl.DeviceId, prog pattern.Segment, mode HashMode, targetH
 		}
 	}()
 
-	c.context, err = cl.CreateContext(nil, []cl.DeviceId{device}, nil)
+	c.context, _, err = cl.CreateContext(nil, []cl.DeviceId{device}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -121,8 +121,8 @@ func NewCracker(device cl.DeviceId, prog pattern.Segment, mode HashMode, targetH
 	}
 	defer cl.ReleaseProgram(program)
 	if err := cl.BuildProgram(program, []cl.DeviceId{device}, "", nil); err != nil {
-		var errLog string
-		if err := cl.GetProgramBuildInfo(program, device, cl.PROGRAM_BUILD_LOG, &errLog); err != nil {
+		errLog, err := cl.GetProgramBuildInfo[string](program, device, cl.PROGRAM_BUILD_LOG)
+		if err != nil {
 			return nil, err
 		}
 		return nil, fmt.Errorf("compiling program: %s", errLog)

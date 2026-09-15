@@ -39,8 +39,8 @@ github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWD
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
-github.com/xypwn/gocl v0.0.0-20260830230154-e7c14d378ca2 h1:2PR0OLKG3g4J9tfjO1ABVWpVfEYUo63l6qY6GYmJVaE=
-github.com/xypwn/gocl v0.0.0-20260830230154-e7c14d378ca2/go.mod h1:En52Jnq3ldN+SrBJBDytwYmn+piRz/ROQbebAbi7TVM=
+github.com/xypwn/gocl v0.0.0-20260915023104-c5227981ce70 h1:vtKXvyyFpRO57033XE/V2mSzA/xQ8x6KgCBXXzbO98A=
+github.com/xypwn/gocl v0.0.0-20260915023104-c5227981ce70/go.mod h1:En52Jnq3ldN+SrBJBDytwYmn+piRz/ROQbebAbi7TVM=
 go.yaml.in/yaml/v3 v3.0.5 h1:N6y/pJk8buWs9NY5ERU2HSMfm+IuD/OtfdAnq6kESPw=
 go.yaml.in/yaml/v3 v3.0.5/go.mod h1:HVTZu1O7/Vkt2N+BFy8Zza+lnLsABggaTM2ZpNIGuKg=
 golang.org/x/image v0.40.0 h1:Tw4GyDXMo+daZN1znreBRC3VayR1aLFUyUEOLUdW1a8=

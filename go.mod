@@ -9,7 +9,7 @@ tool github.com/xypwn/filediver/cmd/tools/filediver-dump-hashes-for-hash-cracker
 require (
 	github.com/hellflame/argparse v1.12.2
 	github.com/stretchr/testify v1.12.1
-	github.com/xypwn/gocl v0.0.0-20260830230154-e7c14d378ca2
+	github.com/xypwn/gocl v0.0.0-20260915023104-c5227981ce70
 	golang.org/x/text v0.41.0
 )
 

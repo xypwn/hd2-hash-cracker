@@ -150,8 +150,8 @@ func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []u
 		return fmt.Errorf("no OpenCL platforms")
 	}
 	platform := platforms[0]
-	var platformName string
-	if err := cl.GetPlatformInfo(platform, cl.PLATFORM_NAME, &platformName); err != nil {
+	platformName, err := cl.GetPlatformInfo[string](platform, cl.PLATFORM_NAME)
+	if err != nil {
 		return err
 	}
 	devices, err := cl.GetDeviceIDs(platform, cl.DEVICE_TYPE_GPU)
@@ -162,8 +162,8 @@ func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []u
 		return fmt.Errorf("no OpenCL devices")
 	}
 	device := devices[0]
-	var deviceName string
-	if err := cl.GetDeviceInfo(device, cl.DEVICE_NAME, &deviceName); err != nil {
+	deviceName, err := cl.GetDeviceInfo[string](device, cl.DEVICE_NAME)
+	if err != nil {
 		return err
 	}
 	c.Msg("Using OpenCL platform %q with device %q", platformName, deviceName)
