@@ -34,6 +34,7 @@
 10m
 10x
 11
+110
 110mm
 113
 117
@@ -183,6 +184,7 @@
 48
 49
 4d
+4mm
 4x
 5
 50
@@ -296,6 +298,7 @@ ab
 abandon
 abandoned
 abbbooooard
+abbreviated
 abcs
 abdomens
 abduct
@@ -394,6 +397,7 @@ acknowledgement
 acknowledges
 acolyte
 acolytes
+acoustic
 acquire
 acquired
 acquiring
@@ -805,6 +809,7 @@ aquila
 ar
 arability
 arbiter
+arbitrator
 arc
 arcane
 arch
@@ -917,11 +922,13 @@ assume
 assumed
 assuming
 assured
+assures
 asteroid
 astral
 astro
 astronaut
 astronomers
+astute
 asunder
 async
 at
@@ -1100,6 +1107,7 @@ bar
 barabos
 barbarity
 barbed
+barbershop
 bare
 barely
 barnard
@@ -1267,6 +1275,7 @@ bewildering
 beyond
 bezcoch
 bfff4752
+bfm
 bi
 bicep
 bid
@@ -1354,6 +1363,7 @@ bloodhound
 bloodiest
 bloodshed
 bloom
+blossom
 blossoms
 blow
 blown
@@ -1455,6 +1465,7 @@ boys
 bp
 br
 brace
+bracing
 brain
 brainless
 brains
@@ -1482,6 +1493,7 @@ brawn
 brawny
 breach
 breached
+breacher
 breaches
 breaching
 break
@@ -2166,6 +2178,7 @@ complacent
 complainer
 complaint
 complaints
+complements
 complete
 completed
 completely
@@ -2199,6 +2212,7 @@ comrade
 comrades
 concealed
 concealment
+conceals
 conceived
 concentrated
 concentrations
@@ -2635,6 +2649,7 @@ damages
 damaging
 dammit
 damn
+dampeners
 dampening
 damsel
 dance
@@ -2687,6 +2702,7 @@ deadlier
 deadlines
 deadly
 deadzone
+deafening
 deal
 dealing
 deals
@@ -2850,6 +2866,7 @@ depicts
 deplete
 depleted
 deploy
+deployable
 deployed
 deployer
 deploying
@@ -3116,6 +3133,7 @@ displaying
 displays
 disposal
 disproven
+dispute
 disqualified
 disrespect
 disrupt
@@ -3228,6 +3246,7 @@ doors
 doorstep
 dormant
 dorothea
+dorsal
 dose
 doses
 dostoinstvo
@@ -3276,6 +3295,7 @@ drape
 draupnir
 draw
 drawback
+drawing
 drawn
 draws
 dreadnought
@@ -3618,6 +3638,7 @@ ensure
 ensures
 ensuring
 entails
+entangled
 entanglement
 enter
 entered
@@ -3771,6 +3792,7 @@ everybody
 everyone
 everything
 everywhere
+evictor
 evidence
 evidences
 evident
@@ -3819,6 +3841,7 @@ executed
 execution
 executioner
 executions
+executive
 executor
 exemplary
 exemplifying
@@ -3974,6 +3997,7 @@ fabricators
 fabrik
 face
 faced
+faceless
 faces
 facial
 facilitate
@@ -4046,6 +4070,7 @@ fashioning
 fast
 faster
 fastest
+fatally
 fate
 fates
 father
@@ -4658,6 +4683,7 @@ gives
 giving
 giza
 gl
+glacial
 glad
 gladly
 glance
@@ -4785,6 +4811,7 @@ grief
 grievous
 grille
 grim
+grinding
 grip
 grisly
 grit
@@ -5241,6 +5268,7 @@ hugging
 hugs
 huh
 hulk
+hulking
 hulks
 hull
 hum
@@ -5320,6 +5348,7 @@ idun
 idyllic
 ie
 if
+ifv
 igla
 igneous
 ignite
@@ -5461,6 +5490,7 @@ indicating
 indication
 indicator
 indirect
+indiscriminate
 indispensable
 indisputably
 individual
@@ -5475,6 +5505,7 @@ industrial
 industrialized
 industries
 industry
+inefficient
 inevitability
 inevitable
 inexplicable
@@ -5717,6 +5748,7 @@ iridica
 iridium
 iro
 iron
+ironclad
 irradiated
 irredeemable
 irrefutable
@@ -6048,6 +6080,8 @@ lemuria
 lend
 leng
 length
+lens
+lenses
 leo
 lesath
 less
@@ -6147,7 +6181,6 @@ liquid
 liquification
 liquifies
 list
-listed
 listen
 listened
 listening
@@ -6200,6 +6233,7 @@ login
 logistic
 logisticae
 logistical
+logistically
 logistics
 logs
 loitering
@@ -6303,6 +6337,7 @@ machineguns
 machinery
 machines
 made
+maelstrom
 mag
 magazine
 magazines
@@ -6584,6 +6619,7 @@ meter
 meters
 methane
 method
+methodical
 methodology
 methods
 meticulously
@@ -6780,6 +6816,7 @@ morgunsdottir
 morgunson
 morning
 morons
+morse
 morskie
 mort
 mortality
@@ -7185,6 +7222,7 @@ onsen
 onslaught
 onto
 onward
+onyx
 ooh
 oop
 oops
@@ -7358,6 +7396,7 @@ p
 pa
 pace
 pacesetter
+pacification
 pacified
 pacifier
 pack
@@ -7760,6 +7799,7 @@ pollination
 pollux
 polski
 polyester
+polymer
 polymers
 polynucleotides
 polystyrene
@@ -7912,6 +7952,7 @@ prior
 prioritize
 prioritized
 prioritizes
+prioritizing
 priority
 prioriy
 prism
@@ -8147,6 +8188,7 @@ quarries
 quarry
 quarter
 quarters
+quartets
 quasar
 queen
 quell
@@ -8411,6 +8453,7 @@ reflex
 refocus
 refocusing
 reformed
+reformer
 refrain
 refresh
 refreshing
@@ -8765,6 +8808,7 @@ roadblock
 roadkill
 roam
 roaming
+roar
 robbing
 robo
 robot
@@ -8875,6 +8919,7 @@ safer
 safety
 saffron
 sagan
+sai
 said
 sailcloth
 sake
@@ -9035,6 +9080,7 @@ scratch
 scratched
 scream
 screaming
+screams
 screeches
 screen
 scribbled
@@ -9250,6 +9296,7 @@ sharp
 sharpness
 sharpshooter
 shatter
+shattered
 shattering
 shatters
 shave
@@ -10741,6 +10788,8 @@ tray
 treacheries
 treacherous
 treachery
+tread
+treadhead
 treads
 treason
 treasonous
@@ -10780,6 +10829,7 @@ trigon
 trillion
 trillions
 trims
+trio
 trip
 triple
 trips
@@ -10939,6 +10989,7 @@ underhanded
 underlayer
 undermine
 underneath
+underslung
 understand
 understanding
 understated
@@ -11612,6 +11663,7 @@ wonders
 wondrous
 woo
 wood
+woodland
 woooo
 wooooo
 wooooooo

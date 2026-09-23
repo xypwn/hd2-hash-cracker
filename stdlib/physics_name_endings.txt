@@ -50,6 +50,7 @@
 /arctic_snowdunes_8m_02
 /arctic_snowdunes_8m_03
 /assault_rifle_helghast
+/at_self_destruct_drone
 /background_mountain_01
 /background_mountain_03
 /barbwire_decoration_01
@@ -177,9 +178,7 @@
 /generator_lamp_head_01
 /generic_debris_huge_01
 /grassland_bush_fern_01
-/grassland_bush_fern_02
 /grassland_bush_fern_03
-/grassland_bush_fern_04
 /grassland_bush_fern_05
 /grassland_red_grass_01
 /grassland_red_grass_02
@@ -287,6 +286,7 @@
 /oasis_mountains_64m_01
 /objective_colony_relay
 /obstacle_course_sprint
+/planter_bush_medium_01
 /platform_kit_square_2x
 /platform_kit_square_4x
 /platform_kit_square_8x
@@ -345,7 +345,6 @@
 /small_pipes_connection
 /smg_nacho_mag_standard
 /smooth_rock_massive_01
-/smooth_rock_massive_02
 /soldier_standard_rifle
 /supply_container_01_2x
 /survival_shovel_trench
@@ -415,7 +414,6 @@ _bug_nest_hive_world_01
 _bug_nest_hive_world_02
 _bug_nest_hive_world_03
 _bugs/eggsack/embryo_01
-_bush_fern_06_clustered
 _cable_attach_object_01
 _cable_attach_object_02
 _cache_bio_sample_2m_01
@@ -480,6 +478,9 @@ _crate_medium_01_2stack
 _creature/hive_lord_leg
 _cricket/pistol_cricket
 _debris_01_meshparticle
+_defend_horde_colony_01
+_defend_horde_colony_02
+_defend_horde_colony_03
 _detector_tower_city_01
 _detector_tower_city_02
 _door/bug_membrane_door
@@ -513,7 +514,6 @@ _grenade/impact_grenade
 _grenade/sticky_grenade
 _grenade/zipper_grenade
 _growth/rift_spores_obj
-_gun/turret_tank_gun_mg
 _hard_occupiedcolony_01
 _harvester/il_harvester
 _haunted_blocker_32m_01
@@ -576,6 +576,7 @@ _outpost_colony_easy_02
 _outpost_colony_easy_03
 _outpost_colony_hard_01
 _outpost_colony_hard_02
+_outpost_easy_nature_01
 _outpost_medium_city_01
 _outpost_medium_city_02
 _outpost_medium_city_03
@@ -595,6 +596,7 @@ _resources/missing_unit
 _rico_magazine_standard
 _rifle/recoilless_rifle
 _rifle_large_calibre_01
+_risk_magazine_standard
 _rock_generic_medium_01
 _rock_generic_medium_02
 _rock_generic_medium_03
@@ -687,7 +689,7 @@ _units/bug_wastes_8m_01
 _units/cy_extraction_03
 _units/cy_extraction_05
 _units/cy_extraction_06
-_units/cy_extraction_07
+_units/cy_extraction_09
 _units/field_dead_4m_01
 _units/field_dead_8m_01
 _units/field_dead_8m_02
@@ -979,6 +981,7 @@ assland_regular_bush_05
 assland_regular_bush_06
 assland_regular_bush_07
 assland_regular_bush_08
+aster/laser_smg_blaster
 at_scav_spawners_16m_01
 at_walker/combat_walker
 atagem_officer_light_01
@@ -1061,7 +1064,6 @@ ber_destroyed_left_door
 ber_destroyed_left_wing
 ber_destroyed_main_body
 berserker/cha_berserker
-big_wall_halfpipe_third
 big_wall_straight_third
 billboard_pole_small_01
 bio_sample_massgrave_01
@@ -1071,7 +1073,6 @@ bjective_colony_icbm_02
 ble/il_rubble_medium_01
 ble/il_rubble_medium_02
 bler_battery_connection
-bles/il_cables_thick_01
 bles/il_cables_thick_02
 bles/il_cables_thick_03
 bles/il_cables_thick_04
@@ -1079,6 +1080,7 @@ bles/il_cables_thick_05
 blood_dripping_small_01
 blood_dripping_small_02
 blue_corp_gun_locker_01
+board_asset_400x400_01b
 board_asset_400x400_01c
 board_asset_800x400_01b
 board_asset_800x400_01c
@@ -1086,6 +1088,7 @@ board_wrap_16m14m8m_01a
 body_bags/body_bag_pile
 borg/props/cy_robot_arm
 borg/props/generator_01
+borg/signs/sign_down_01
 borg_command_bunker_top
 borg_cooling_pipe_valve
 borg_dropship_landed_02
@@ -1120,6 +1123,9 @@ bs_landing_pad_01_light
 bs_railing_corner_cover
 bs_ventilation_wall_010
 bs_ventilation_wall_013
+bug_cave_stalactites_01
+bug_cave_stalactites_02
+bug_cave_stalactites_03
 bug_commercial_16x8m_01
 bug_commercial_8x16m_01
 bug_corpse_gore_pile_01
@@ -1167,15 +1173,6 @@ c_rock_generic_large_04
 c_rock_generic_small_01
 c_rock_generic_small_02
 c_shield_backpack_small
-cables/il_cable_root_01
-cables/il_cable_root_02
-cables/il_cable_root_03
-cables/il_cable_root_04
-cables/il_cable_root_05
-cables/il_cable_root_06
-cables/il_cable_root_07
-cables/il_cable_root_08
-cables/il_cable_root_09
 cache/super_earth_cache
 cache_e710_sample_2m_01
 cache_e710_sample_3m_01
@@ -1191,6 +1188,7 @@ cave_tunnel_entrance_01
 cave_tunnel_junction_01
 cave_tunnel_straight_01
 cave_tunnel_straight_02
+cbm_silo/icbm_silo_wide
 ce/se_chainfence_pillar
 ce_wall_barbedwire_full
 ce_wall_barbedwire_half
@@ -1318,6 +1316,7 @@ ctures/habs_platform_02
 ctures/habs_platform_03
 ctures/habs_platform_04
 ctures/habs_platform_05
+cw_buckeye_tree_01_gibs
 cy_camp_assault_easy_02
 cy_camp_assault_easy_03
 cy_camp_assault_hard_01
@@ -1360,6 +1359,10 @@ cy_sub_hack_refinery_02
 cy_sub_hack_refinery_03
 cy_tac_colony_jammer_01
 cy_tac_colony_jammer_02
+cy_unlock_extraction_01
+cy_unlock_extraction_02
+cy_unlock_extraction_03
+cy_unlock_extraction_04
 cy_world_mortar_base_01
 cy_world_mortar_base_02
 cyborg/props/ammobox_01
@@ -1403,7 +1406,6 @@ dead_alien_tree_03_gibs
 dead_alien_tree_04_gibs
 dead_alien_tree_06_gibs
 dead_alien_tree_07_gibs
-dead_large_01_destroyed
 deciduous_extraction_01
 deciduous_extraction_02
 ded_magazine_fastreload
@@ -1545,6 +1547,9 @@ e_stalagmites_medium_02
 e_steal_energy_cores_01
 e_steal_energy_cores_02
 e_tanker/shuttle_tanker
+e_tutorial_wall_half_01
+e_tutorial_wall_half_02
+e_tutorial_wall_half_03
 e_tutorial_wall_tall_01
 e_wallbig_wall_top_full
 e_wallmed_wall_top_full
@@ -1558,7 +1563,6 @@ ead_alien_tree_04_leafy
 ead_alien_tree_04_stump
 ead_alien_tree_05_leafy
 ead_alien_tree_stump_01
-ead_medium_01_destroyed
 ear/intel_pda/intel_pda
 earth/cha_seaf/cha_seaf
 easy_frontlinetrench_01
@@ -1622,7 +1626,6 @@ ee_set_02_04_leafy_gibs
 eedtrees/corn_single_01
 een_01/big_tv_screen_01
 ees/cities_shrub_medium
-ees/tree_dead_medium_01
 efunct/hellbomb_defunct
 egendarium_sample_2m_01
 egendarium_sample_3m_01
@@ -1714,12 +1717,15 @@ er/faf_missile_launcher
 er/il_harvester_hole_01
 er/il_scrambler_battery
 er_area/cy_trigger_area
+er_bush_medium_cover_01
 er_destroyed_right_door
 er_destroyed_right_wing
 er_easy_walkerrepair_01
 er_entrance_02_backside
 er_mountain_route_8m_01
 er_pistol/flamer_pistol
+er_smg_blaster_extended
+er_smg_blaster_standard
 eric/debug_store_screen
 eric_debris_set_hero_01
 ero_tree_destruction_01
@@ -1818,6 +1824,7 @@ estroyed_turret_body_01
 estroyed_turret_body_02
 et/combat_walker_turret
 et_infiltration_package
+et_pistol/hornet_pistol
 et_tree_haunted_01_gibs
 et_tree_haunted_02_gibs
 et_tree_haunted_03_gibs
@@ -1907,10 +1914,12 @@ g_hive/spore_cluster_01
 g_hive/spore_cluster_02
 g_hive/spore_cluster_03
 g_hive/spore_cluster_04
+g_hiveworld_delta_8m_01
 g_infested_colony_4m_01
 g_infested_colony_4m_02
 g_infested_colony_8m_01
 g_infested_colony_8m_02
+g_infested_colony_8m_03
 g_lights/flood_light_01
 g_lights/flood_light_02
 g_organic_assembly_site
@@ -2119,7 +2128,6 @@ hero_tree_haunted_small
 hero_tree_large_root_01
 hero_tree_large_root_02
 hes/cube_navmesh_cutter
-hes/cube_navmesh_volume
 hicles/habs_forklift_01
 hip/hangar/bay_7m_doors
 hip/hangar/wall_bay_12m
@@ -2176,6 +2184,7 @@ ial_shrub_large_02_dead
 ial_sink_hole_16x16m_01
 ial_sink_hole_32x16m_01
 ial_sink_hole_32x32m_01
+ial_wall_pillar_half_01
 iar/bug_caviar_large_01
 iar/bug_caviar_small_01
 iar/bug_caviar_small_02
@@ -2485,7 +2494,6 @@ l_document_flesh_lab_04
 l_document_flesh_lab_05
 l_easy_supporttrench_01
 l_easy_supporttrench_03
-l_easy_supporttrench_04
 l_encounter_ship_landed
 l_field/oil_field_plane
 l_kit/se_wallbig_pillar
@@ -2684,6 +2692,7 @@ melee/cha_exomech_melee
 ment/helldiver_torso_01
 mera/gen_footage_volume
 mg/cyborg_top_turret_mg
+mg_blaster_fastcooldown
 mic_probe/seismic_probe
 military_uplink_city_01
 military_uplink_city_02
@@ -2820,6 +2829,7 @@ ng_pipe_small_tsplit_01
 ng_stairs_2_50m_noplate
 nged/cha_exomech_ranged
 ngs/8x8x5/001/8x8x5_001
+ngun/tank_storm_maingun
 ni_missile_silo_missile
 nic/bones/whale_bone_01
 nic/bones/whale_bone_02
@@ -2901,9 +2911,10 @@ nits/sandy_lakes_24m_01
 nits/sandy_lakes_32m_01
 nits/sandy_lakes_48m_01
 nits/sandy_lakes_64m_01
-nits/se_defend_horde_01
 nits/se_defend_horde_02
 nits/se_defend_horde_04
+nits/se_defend_horde_07
+nits/se_defend_horde_08
 nits/se_sat_tower_8m_01
 nits/swamp_bayou_16m_01
 nits/swamp_bayou_32m_01
@@ -2969,6 +2980,9 @@ ny_curb_outer_corner_01
 ny_curb_straight_2_50_m
 ny_curb_straight_2m_01b
 ny_curb_straight_4m_02b
+ny_street_sign_triangle
+oard_asset_1000x400_01a
+oard_asset_1200x400_01a
 objective_ammo_depot_01
 objective_ammo_depot_02
 objective_fuel_depot_01
@@ -3040,6 +3054,7 @@ ony_checkpoint_kiosk_01
 ony_curb_straight_4m_02
 ony_rescue_civilians_01
 ony_rescue_civilians_02
+ony_street_sign_octagon
 ony_tac_hack_turrets_01
 ony_wall_gate_64x32m_01
 ony_wall_segment_2m5_01
@@ -3095,6 +3110,7 @@ org_wall_gate_64x32m_01
 orial/sign_welcome_cape
 orial_cape_room_wall_03
 orm_kit_square_thin_16m
+ornet_pistol_projectile
 orpses/conscript_arm_01
 orpses/conscript_leg_01
 ort_discoverable_box_01
@@ -3254,6 +3270,7 @@ r/cyborg_command_bunker
 r/cyborg_spawner_jammer
 r/pathfinder_lightspear
 r/props/counter_door_01
+r/pump_grenade_launcher
 r_acid/cha_charger_acid
 r_acid/cha_warrior_acid
 r_arid_tree_set_01_gibs
@@ -3340,13 +3357,14 @@ ree_corals_clumps_stump
 reeble_bottom_01_merged
 reeble_bottom_02_merged
 rees/cities_shrub_large
+rees/cw_buckeye_tree_01
+rees/cw_buckeye_tree_02
 rees/rift_bush_01_large
 rees/rift_tree_05_large
 rees/rift_tree_stump_01
 rees/swamp_dead_bush_01
 rees/swamp_dead_bush_02
 rees/swamp_dead_bush_03
-rees/tree_dead_large_01
 reet_planter_100x100_1a
 reet_planter_100x100_1b
 reet_planter_200x100_1a
@@ -3438,6 +3456,7 @@ riotgun/soldier_riotgun
 ripping_bug_goo_thin_2m
 ript_grenade_incendiary
 ris/generic_debris_rust
+risk/assault_rifle_risk
 rium_sample_sinkhole_01
 rk/marksman_rifle_shark
 rks/units/sparks_medium
@@ -3445,6 +3464,7 @@ rks_small_light_smoking
 rld_spore_lung_tentacle
 rld_tac_hack_turrets_01
 rm_kit_stairs_wall_6m2m
+rm_silo/tank_storm_silo
 rn/prefab_peak_06_merge
 rn_shuttle_gunship_hull
 rn_shuttle_gunship_legs
@@ -3775,6 +3795,7 @@ s/swamp_wet_tree_set_01
 s/swamp_wet_tree_set_02
 s/swamp_wet_tree_set_03
 s/swamp_wet_tree_set_04
+s/tank_storm/tank_storm
 s/trees/stump_medium_01
 s/trench_wall_pillar_01
 s/utilities_speakers_01
@@ -3856,6 +3877,8 @@ se_commercial_54x54m_03
 se_commercial_54x54m_04
 se_defend_horde_city_01
 se_defend_horde_city_02
+se_defend_horde_city_03
+se_defend_horde_city_04
 se_government_16x16m_16
 se_government_54x54m_01
 se_government_54x54m_02
@@ -3893,7 +3916,6 @@ sets/trees/log_large_03
 sets/trees/log_small_01
 sharp/rocky_mountain_03
 shell_empty_pile_big_01
-shes/helldiver_size_ref
 ship/hangar/floor_upper
 ship/hangar/wall_bay_7m
 ship_right_engine_wreck
@@ -4114,6 +4136,7 @@ tifact_sample_shrine_02
 tifact_sample_shrine_03
 tifications/barbwire_01
 tilities/cctv_camera_01
+tilities/cctv_camera_02
 tilities/pipeline_curve
 tilities/small_pipes_2m
 tilities/solar_panel_01
@@ -4344,6 +4367,11 @@ ug_tac_shrieker_nest_01
 ug_tac_shrieker_nest_02
 ug_tac_shrieker_nest_03
 ug_tac_shrieker_nest_05
+ug_web/bug_web_gloom_01
+ug_web/bug_web_gloom_02
+ug_web/bug_web_gloom_05
+ug_web/bug_web_gloom_06
+ug_web/bug_web_gloom_07
 uildings/28x16_slice_01
 uildings/28x16_slice_02
 uildings/28x16_slice_03
