@@ -207,13 +207,19 @@ func (c *Cracker) ChangeNumTries(newNumTries int) {
 // It makes sense to pre-calculate the next indices while the kernel
 // runs on the GPU.
 func (c *Cracker) fillNextIdxsBuf() {
-	c.idx.Reset()
-	if c.totalIdx > 0 {
-		// Note that addition may overflow here, but that's
-		// fine since we'll be setting the tries to zero
-		// if the total index goes past the limit.
-		c.idx.Add(c.prog, c.totalIdx)
+	// Common case is that we're already at
+	// the index we want, meaning we can skip
+	// this fairly expensive addition.
+	if c.idx.TotalIdx != c.totalIdx {
+		c.idx.Reset()
+		if c.totalIdx > 0 {
+			// Note that addition may overflow here, but that's
+			// fine since we'll be setting the tries to zero
+			// if the total index goes past the limit.
+			c.idx.Add(c.prog, c.totalIdx)
+		}
 	}
+
 	for i := range c.opts.Workers {
 		n := readIdx(c.nextIdxsBuf[i*c.bufs.idxLen:], c.prog, c.idx)
 		if n != c.bufs.idxLen {
