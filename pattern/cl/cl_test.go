@@ -1,6 +1,7 @@
 package cl_test
 
 import (
+	"fmt"
 	"runtime"
 	"slices"
 	"testing"
@@ -30,6 +31,9 @@ func TestCl(t *testing.T) {
 	}
 	device := devices[0]
 
+	type testCaseExtraOpts struct {
+		datalibUnknownLen bool
+	}
 	testCases := []struct {
 		name                string
 		opts                pcl.Options
@@ -38,6 +42,7 @@ func TestCl(t *testing.T) {
 		mode                pcl.HashMode
 		targetHashes        []string
 		expectedFoundHashes []string
+		extraOpts           testCaseExtraOpts
 	}{
 		{
 			"basic",
@@ -46,7 +51,8 @@ func TestCl(t *testing.T) {
 			pattern.CompileOptions{NoOptimize: true},
 			pcl.HashMurmur64a,
 			[]string{"000", "123", "124", "125", "997", "998", "999"},
-			[]string{"000", "123", "124", "125", "997", "998", "999"},
+			nil,
+			testCaseExtraOpts{},
 		},
 		{
 			"accept all",
@@ -56,6 +62,23 @@ func TestCl(t *testing.T) {
 			pcl.HashMurmur64a,
 			[]string{""},
 			[]string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "x", "y"},
+			testCaseExtraOpts{},
+		},
+		{
+			"accept all big",
+			pcl.Options{Workers: 1, MinMatchBufLen: 1, Tries: 32, Debug: pcl.DebugOptions{AcceptAllAsMatch: true}},
+			"[0-9]{4}",
+			pattern.CompileOptions{NoOptimize: true},
+			pcl.HashMurmur64a,
+			[]string{""},
+			func() []string {
+				var ss []string
+				for i := range 10000 {
+					ss = append(ss, fmt.Sprintf("%04d", i))
+				}
+				return ss
+			}(),
+			testCaseExtraOpts{},
 		},
 		{
 			"index",
@@ -65,6 +88,27 @@ func TestCl(t *testing.T) {
 			pcl.HashMurmur64a,
 			[]string{"123", "455", "456", "457", "458", "999"},
 			[]string{"456", "457", "458", "999"},
+			testCaseExtraOpts{},
+		},
+		{
+			"datalib",
+			pcl.Options{Workers: 1, MinMatchBufLen: 1, Tries: 4, Debug: pcl.DebugOptions{}},
+			"[0-9]{3}",
+			pattern.CompileOptions{NoOptimize: true},
+			pcl.HashDatalib,
+			[]string{"000", "123", "124", "125", "997", "998", "999"},
+			nil,
+			testCaseExtraOpts{},
+		},
+		{
+			"datalib unknown lengths",
+			pcl.Options{Workers: 1, MinMatchBufLen: 1, Tries: 4, Debug: pcl.DebugOptions{}},
+			"[0-9]{3}",
+			pattern.CompileOptions{NoOptimize: true},
+			pcl.HashDatalib,
+			[]string{"000", "123", "124", "125", "997", "998", "999"},
+			nil,
+			testCaseExtraOpts{datalibUnknownLen: true},
 		},
 	}
 
@@ -83,6 +127,9 @@ func TestCl(t *testing.T) {
 					h = uint64(hash.Thin(hash.Murmur64aSum(s)))
 				case pcl.HashDatalib:
 					h = uint64(hash.DatalibHashSum(s))
+					if !c.extraOpts.datalibUnknownLen {
+						h |= uint64(len(s)) << 32
+					}
 				}
 				targetHashes = append(targetHashes, h)
 			}
@@ -99,7 +146,12 @@ func TestCl(t *testing.T) {
 				require.NoError(err)
 				gotMatches = append(gotMatches, matches...)
 			}
-			expectMatches := slices.Clone(c.expectedFoundHashes)
+			var expectMatches []string
+			if c.expectedFoundHashes == nil {
+				expectMatches = slices.Clone(c.targetHashes)
+			} else {
+				expectMatches = slices.Clone(c.expectedFoundHashes)
+			}
 			slices.Sort(expectMatches)
 			slices.Sort(gotMatches)
 			require.Equal(expectMatches, gotMatches)

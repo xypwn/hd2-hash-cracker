@@ -401,13 +401,26 @@ func run() error {
 
 			var h uint64
 			var err error
-			switch hashMode.Bits() {
-			case 64:
+			switch hashMode {
+			case pcl.HashMurmur64a:
 				h, err = hash.Parse64(string(line))
-			case 32:
+			case pcl.HashMurmur64aThin:
 				var h32 uint32
 				h32, err = hash.Parse32(string(line))
 				h = uint64(h32)
+			case pcl.HashDatalib:
+				hashStr, lenStr, ok := bytes.Cut(line, []byte("##"))
+				if !ok {
+					err = fmt.Errorf("expected <hash>##<length>, but got %q (please ensure you provided a datalib hash list)", line)
+				}
+				var h32 uint32
+				var l uint64
+				h32, err = hash.Parse32(string(hashStr))
+				if err != nil {
+					break
+				}
+				l, err = strconv.ParseUint(string(lenStr), 10, 32)
+				h = (l << 32) | uint64(h32) // pack length and actual hash into a single u64
 			}
 			if err != nil {
 				var sfx string
