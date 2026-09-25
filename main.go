@@ -46,7 +46,7 @@ type cracker struct {
 	// End           //
 }
 
-func runCracker(ctx context.Context, patternSrc []byte, patternFilename string, patternFs fs.FS, mode pcl.HashMode, targetHashes []uint64, workersHint int, writeClCode bool) (newHashes []string, err error) {
+func runCracker(ctx context.Context, patternSrc []byte, patternFilename string, patternFs fs.FS, mode pcl.HashMode, targetHashes []uint64, datalibTargetHashes []uint64, workersHint int, writeClCode bool) (newHashes []string, err error) {
 	c := &cracker{
 		ctx:       ctx,
 		newHashes: make(map[string]struct{}),
@@ -63,7 +63,7 @@ func runCracker(ctx context.Context, patternSrc []byte, patternFilename string, 
 	var workerErr error
 	done := make(chan error)
 	go func() {
-		done <- crack(c, prog, mode, targetHashes, workersHint, writeClCode)
+		done <- crack(c, prog, mode, targetHashes, datalibTargetHashes, workersHint, writeClCode)
 		close(done)
 	}()
 
@@ -138,7 +138,7 @@ func (c *cracker) Status(format string, args ...any) {
 	c.mu.Unlock()
 }
 
-func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []uint64, workersHint int, writeClCode bool) error {
+func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []uint64, datalibTargetHashes []uint64, workersHint int, writeClCode bool) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -188,6 +188,14 @@ func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []u
 		c.Msg("wrote generated OpenCL code to kernel.cl")
 	}
 
+	var datalibTargetHashesSet map[uint64]struct{}
+	if mode == pcl.HashDatalib {
+		datalibTargetHashesSet = make(map[uint64]struct{})
+		for _, h := range datalibTargetHashes {
+			datalibTargetHashesSet[h] = struct{}{}
+		}
+	}
+
 	c.Msg("Making guesses")
 	c.Status("Warming up / collecting baseline")
 	prevTotalIdx := 0
@@ -206,6 +214,15 @@ func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []u
 		}
 
 		for _, s := range matches {
+			if mode == pcl.HashDatalib {
+				// Prevent collision-based false positives that may happen
+				// due to our splitmixing for datalib hashes.
+				h := (uint64(len(s)) << 32) | uint64(hash.DatalibHashSum(s))
+				if _, ok := datalibTargetHashesSet[h]; !ok {
+					continue
+				}
+			}
+
 			c.mu.Lock()
 			_, wasntNew := c.newHashes[s]
 			c.mu.Unlock()
@@ -372,6 +389,7 @@ func run() error {
 	}
 
 	var targetHashes []uint64
+	var datalibTargetHashes []uint64 // if datalib mode: target hashes without splitmixing
 	{
 		var data []byte
 		if *optHashes != "" {
@@ -400,6 +418,7 @@ func run() error {
 			}
 
 			var h uint64
+			var hDatalib uint64
 			var err error
 			switch hashMode {
 			case pcl.HashMurmur64a:
@@ -420,7 +439,8 @@ func run() error {
 					break
 				}
 				l, err = strconv.ParseUint(string(lenStr), 10, 32)
-				h = (l << 32) | uint64(h32) // pack length and actual hash into a single u64
+				hDatalib = (l << 32) | uint64(h32) // pack length and actual hash into a single u64
+				h = hash.SplitMix64(hDatalib)
 			}
 			if err != nil {
 				var sfx string
@@ -430,6 +450,9 @@ func run() error {
 				return fmt.Errorf("parsing target hash: %w%s", err, sfx)
 			}
 			targetHashes = append(targetHashes, h)
+			if hashMode == pcl.HashDatalib {
+				datalibTargetHashes = append(datalibTargetHashes, hDatalib)
+			}
 		}
 		slices.Sort(targetHashes)
 		util.Uniq(targetHashes)
@@ -451,7 +474,7 @@ func run() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	newHashes, err := runCracker(ctx, patternSrc, patternFilename, patternRootFs.FS(), hashMode, targetHashes, *optWorkersHint, *optWriteClCode)
+	newHashes, err := runCracker(ctx, patternSrc, patternFilename, patternRootFs.FS(), hashMode, targetHashes, datalibTargetHashes, *optWorkersHint, *optWriteClCode)
 	if err != nil {
 		return err
 	}

@@ -11,7 +11,6 @@ import (
 	"unicode/utf8"
 
 	cl "github.com/xypwn/gocl/cl-3.1"
-	"github.com/xypwn/hd2-hash-cracker/hash"
 	"github.com/xypwn/hd2-hash-cracker/pattern"
 	"github.com/xypwn/hd2-hash-cracker/util"
 )
@@ -24,6 +23,9 @@ type HashMode int
 const (
 	HashMurmur64a = iota
 	HashMurmur64aThin
+	// This represents a 64-bit packed
+	// datalib hash with length, specifically:
+	// SplitMix64((length << 32) | (dlbin_hash(input_string))).
 	HashDatalib
 )
 
@@ -42,7 +44,7 @@ func (m HashMode) String() string {
 
 func (m HashMode) Bits() int {
 	switch m {
-	case HashMurmur64a, HashDatalib /*datalib is pseudo-64-bit, since we pack length into high 32 bits*/ :
+	case HashMurmur64a, HashDatalib /*our packed datalib "hash" is 64-bit*/ :
 		return 64
 	case HashMurmur64aThin:
 		return 32
@@ -103,15 +105,6 @@ type clBuffers struct {
 }
 
 func makeClBuffers(context cl.Context, s pattern.Segment, hashMode HashMode, targetHashes []uint64, numWorkers, matchBufLen int) (*clBuffers, error) {
-	if hashMode == HashDatalib {
-		targetHashes = slices.Clone(targetHashes)
-		// For datalib hashes we use an additional splitmix
-		// to improve bloom filter effectiveness.
-		for i := range targetHashes {
-			targetHashes[i] = hash.SplitMix64(targetHashes[i])
-		}
-	}
-
 	var targetHashes32 []uint32
 	var targetHashes64 []uint64
 	switch hashMode.Bits() {
@@ -486,9 +479,6 @@ func generateClCode(s pattern.Segment, bufs *clBuffers) (code []byte) {
 		cb.L("#define HASH_FUNCTION murmur64a_thin_sum")
 	case HashDatalib:
 		cb.L("#define HASH_FUNCTION datalib_hash_sum")
-		// Datalib hash gets treated specially since it often
-		// has a known string length.
-		cb.L("#define HASH_IS_DATALIB 1")
 	}
 	cb.L("#define IDX_LEN %d", bufs.idxLen)
 	cb.L("")

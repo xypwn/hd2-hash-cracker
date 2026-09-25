@@ -27,6 +27,14 @@ typedef u32 hash_t;
 #error "HASH_BITS must be 64 or 32"
 #endif
 
+// splitmix64 to improve bloom filter effectiveness.
+u64 splitmix64(u64 x) {
+    u64 z = x + 0x9e3779b97f4a7c15ul;
+    z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ul;
+    z = (z ^ (z >> 27)) * 0x94d049bb133111ebul;
+    return z ^ (z >> 31);
+}
+
 // Hash functions. d is string as u64 array, n is the number
 // of bytes.
 //
@@ -91,16 +99,12 @@ u64 datalib_hash_sum(const u64 *d, u32 n) {
 
   // Datalib is technically a 32-bit hash,
   // but we also pack the length since it's
-  // often known for the target hashes.
-  return ((u64)n << 32) | (u64)hash;
-}
-
-// splitmix64 to improve bloom filter effectiveness.
-u64 splitmix64(u64 x) {
-    u64 z = x + 0x9e3779b97f4a7c15ul;
-    z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ul;
-    z = (z ^ (z >> 27)) * 0x94d049bb133111ebul;
-    return z ^ (z >> 31);
+  // known for all the target hashes.
+  //
+  // Since we have a lot of zeroes in the
+  // high 32 bits, we use splitmix to shuffle
+  // the bits, improving bloom filter performance.
+  return splitmix64(((u64)n << 32) | (u64)hash);
 }
 
 void* memcpy_pc(void* dest, __constant void* src, size_t n) {
@@ -162,23 +166,11 @@ bool binary_search(hash_t hash, __global const hash_t *target_hashes) {
 bool try(const u64 *s, u32 n, const size_t id, __global const u32 *hash_bitmap, __global const hash_t *target_hashes, __global char *matches, __global u32 *matches_lens) {
   hash_t h = HASH_FUNCTION(s, n);
 #ifndef DEBUG_ACCEPT_ALL_AS_MATCH
-#  ifndef HASH_IS_DATALIB
-  // If we have a regular hash, we simply check the
-  // bitmap first (fast, may give false matches) and
-  // then do a binary search (slow, tells us exactly
+  // We check the bitmap first (fast, may give false matches)
+  // and then do a binary search (slow, tells us exactly
   // whether we have a match).
   if (!bitmap_test(h, hash_bitmap)    ) return true;
   if (!binary_search(h, target_hashes)) return true;
-#  else
-  // If we have a datalib hash, our target hash length might be unknown indicated by zero.
-  // We want to always check for the candidate with its actual length AND length zero and only
-  // exclude it from matching if neither exists in the candidates.
-  // We also splitmix so the bloom filter works more effectively.
-  hash_t hl = splitmix64(h); // hash with length
-  hash_t hz = splitmix64(h&0xFFFFFFFFul); // length bits zeroed
-  if (!bitmap_test(hl, hash_bitmap)     && !bitmap_test(hz, hash_bitmap)    ) return true;
-  if (!binary_search(hl, target_hashes) && !binary_search(hz, target_hashes)) return true;
-#  endif
 #endif
   if (matches_lens[id]+n+1 > MAX_MATCH_BUF_LEN)
     return false;

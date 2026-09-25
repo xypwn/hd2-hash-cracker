@@ -93,22 +93,12 @@ func TestCl(t *testing.T) {
 		{
 			"datalib",
 			pcl.Options{Workers: 1, MinMatchBufLen: 1, Tries: 4, Debug: pcl.DebugOptions{}},
-			"[0-9]{3}",
+			"[0-9]{1,3}",
 			pattern.CompileOptions{NoOptimize: true},
 			pcl.HashDatalib,
-			[]string{"000", "123", "124", "125", "997", "998", "999"},
+			[]string{"1", "12", "000", "123", "124", "125", "997", "998", "999"},
 			nil,
 			testCaseExtraOpts{},
-		},
-		{
-			"datalib unknown lengths",
-			pcl.Options{Workers: 1, MinMatchBufLen: 1, Tries: 4, Debug: pcl.DebugOptions{}},
-			"[0-9]{3}",
-			pattern.CompileOptions{NoOptimize: true},
-			pcl.HashDatalib,
-			[]string{"000", "123", "124", "125", "997", "998", "999"},
-			nil,
-			testCaseExtraOpts{datalibUnknownLen: true},
 		},
 	}
 
@@ -130,6 +120,7 @@ func TestCl(t *testing.T) {
 					if !c.extraOpts.datalibUnknownLen {
 						h |= uint64(len(s)) << 32
 					}
+					h = hash.SplitMix64(h)
 				}
 				targetHashes = append(targetHashes, h)
 			}
