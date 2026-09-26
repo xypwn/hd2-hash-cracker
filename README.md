@@ -47,6 +47,8 @@ Fast GPU-based hash cracking for Helldivers 2, optimized for file paths.
 - `#{prefixes x delims}`: collect all prefixes of `x`, split by any of `delims` and deduplicate (e.g. `#{prefixes <a/b/c|a/b_d> _/}` -> `<a|a/b|a/b/c|a/b_d>`)
 - `#{suffixes x delims}`: collect all suffixes of `x`, split by any of `delims` and deduplicate (e.g. `#{prefixes <a/b/c|x_b/c> _/}` -> `<c|b/c|a/b/c|x_b/c>`)
 - `#{merge x y ...}`: merge all items in `x`, `y`, or any additional number of or expressions of strings, resulting in a flat or expression of strings with duplicates removed (you'll want to use this e.g. when combining word lists)
+- `#{dup x n delim}`: duplicate all strings in `x` `n` times, separated by `delim` (e.g. `#{dup <a|b|c> 2 /}` -> `<a/a|b/b|c/c>`)
+- `#{title x}`: convert all strings in `x` to title case
 
 ### Examples
 - `content/#{known-words}{1,3,[_:]}`: `content/` followed by 1-3 known words, separated by `_` or `:`

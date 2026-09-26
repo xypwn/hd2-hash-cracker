@@ -46,7 +46,7 @@ type cracker struct {
 	// End           //
 }
 
-func runCracker(ctx context.Context, patternSrc []byte, patternFilename string, patternFs fs.FS, mode pcl.HashMode, targetHashes []uint64, datalibTargetHashes []uint64, workersHint int, writeClCode bool) (newHashes []string, err error) {
+func runCracker(ctx context.Context, patternSrc []byte, patternFilename string, patternFs fs.FS, mode pcl.HashMode, targetHashes []uint64, datalibTargetHashes []uint64, workersHint int, writeClCode bool, keepGuessing bool) (newHashes []string, err error) {
 	c := &cracker{
 		ctx:       ctx,
 		newHashes: make(map[string]struct{}),
@@ -63,7 +63,7 @@ func runCracker(ctx context.Context, patternSrc []byte, patternFilename string, 
 	var workerErr error
 	done := make(chan error)
 	go func() {
-		done <- crack(c, prog, mode, targetHashes, datalibTargetHashes, workersHint, writeClCode)
+		done <- crack(c, prog, mode, targetHashes, datalibTargetHashes, workersHint, writeClCode, keepGuessing)
 		close(done)
 	}()
 
@@ -138,7 +138,7 @@ func (c *cracker) Status(format string, args ...any) {
 	c.mu.Unlock()
 }
 
-func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []uint64, datalibTargetHashes []uint64, workersHint int, writeClCode bool) error {
+func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []uint64, datalibTargetHashes []uint64, workersHint int, writeClCode bool, keepGuessing bool) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -281,7 +281,7 @@ func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []u
 		prevTotalIdx = cr.TotalIdx()
 		prevTime = now
 
-		if allFound {
+		if allFound && !keepGuessing {
 			c.Msg("All hashes found")
 			break
 		}
@@ -329,6 +329,9 @@ func run() error {
 	})
 	optWriteClCode := argp.Flag("", "debug-oclcode", &argparse.Option{
 		Help: "(debug) write generated OpenCL code to file kernel.cl",
+	})
+	optKeepGuessing := argp.Flag("", "keep-guessing", &argparse.Option{
+		Help: "continue guessing even after all hashes are found",
 	})
 
 	if err := argp.Parse(nil); err != nil {
@@ -474,7 +477,7 @@ func run() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	newHashes, err := runCracker(ctx, patternSrc, patternFilename, patternRootFs.FS(), hashMode, targetHashes, datalibTargetHashes, *optWorkersHint, *optWriteClCode)
+	newHashes, err := runCracker(ctx, patternSrc, patternFilename, patternRootFs.FS(), hashMode, targetHashes, datalibTargetHashes, *optWorkersHint, *optWriteClCode, *optKeepGuessing)
 	if err != nil {
 		return err
 	}
