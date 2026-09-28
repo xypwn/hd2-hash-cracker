@@ -30,6 +30,21 @@ import (
 	"github.com/xypwn/hd2-hash-cracker/util"
 )
 
+type crackerOpts struct {
+	// target hashes to be cracked
+	targetHashes []uint64
+	// un-splitmixed datalib hashes (only used if mode is datalib)
+	datalibTargetHashes []uint64
+	// optional hint for tuner to more quickly guess optimal number of workers
+	workersHint int
+	// debug: output OpenCL code to file
+	writeClCode bool
+	// keep guessing even after all hashes were cracked
+	keepGuessing bool
+	// optionally always stop after duration
+	timeout time.Duration
+}
+
 type cracker struct {
 	ctx    context.Context
 	err    error
@@ -46,7 +61,7 @@ type cracker struct {
 	// End           //
 }
 
-func runCracker(ctx context.Context, patternSrc []byte, patternFilename string, patternFs fs.FS, mode pcl.HashMode, targetHashes []uint64, datalibTargetHashes []uint64, workersHint int, writeClCode bool, keepGuessing bool) (newHashes []string, err error) {
+func runCracker(ctx context.Context, patternSrc []byte, patternFilename string, patternFs fs.FS, mode pcl.HashMode, opts crackerOpts) (newHashes []string, err error) {
 	c := &cracker{
 		ctx:       ctx,
 		newHashes: make(map[string]struct{}),
@@ -63,7 +78,7 @@ func runCracker(ctx context.Context, patternSrc []byte, patternFilename string, 
 	var workerErr error
 	done := make(chan error)
 	go func() {
-		done <- crack(c, prog, mode, targetHashes, datalibTargetHashes, workersHint, writeClCode, keepGuessing)
+		done <- crack(c, prog, mode, opts)
 		close(done)
 	}()
 
@@ -138,7 +153,7 @@ func (c *cracker) Status(format string, args ...any) {
 	c.mu.Unlock()
 }
 
-func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []uint64, datalibTargetHashes []uint64, workersHint int, writeClCode bool, keepGuessing bool) error {
+func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, opts crackerOpts) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -169,19 +184,19 @@ func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []u
 	c.Msg("Using OpenCL platform %q with device %q", platformName, deviceName)
 
 	crackerOpts := pcl.Options{
-		Workers: max(workersHint/2, 256),
+		Workers: max(opts.workersHint/2, 256),
 		Tries:   8192,
 	}
 	tuner := NewTuner(crackerOpts.Workers, crackerOpts.Tries)
 
 	c.Msg("Initializing buffers and compiling OpenCL kernel")
-	cr, err := pcl.NewCracker(device, prog, mode, targetHashes, crackerOpts)
+	cr, err := pcl.NewCracker(device, prog, mode, opts.targetHashes, crackerOpts)
 	if err != nil {
 		return err
 	}
 	defer cr.Delete()
 
-	if writeClCode {
+	if opts.writeClCode {
 		if err := os.WriteFile("kernel.cl", []byte(cr.DebugInfo.OpenClCode), 0666); err != nil {
 			return err
 		}
@@ -191,9 +206,14 @@ func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []u
 	var datalibTargetHashesSet map[uint64]struct{}
 	if mode == pcl.HashDatalib {
 		datalibTargetHashesSet = make(map[uint64]struct{})
-		for _, h := range datalibTargetHashes {
+		for _, h := range opts.datalibTargetHashes {
 			datalibTargetHashesSet[h] = struct{}{}
 		}
+	}
+
+	startTime := time.Now()
+	if opts.timeout > 0 {
+		c.Msg("Timeout set to %s", opts.timeout)
 	}
 
 	c.Msg("Making guesses")
@@ -263,7 +283,7 @@ func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []u
 		if triesPerSecond >= 0 {
 			c.triesPerSecondBuf.Write(triesPerSecond)
 		}
-		allFound := len(c.newHashes) == len(targetHashes)
+		allFound := len(c.newHashes) == len(opts.targetHashes)
 		c.mu.Unlock()
 
 		if w, t, done, changed := tuner.Step(int(cr.LastComputeRunDuration().Nanoseconds()), newTries); changed {
@@ -281,7 +301,14 @@ func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, targetHashes []u
 		prevTotalIdx = cr.TotalIdx()
 		prevTime = now
 
-		if allFound && !keepGuessing {
+		if opts.timeout > 0 {
+			if dt := time.Since(startTime); dt >= opts.timeout {
+				c.Msg("Timeout reached (ran for %s)", dt)
+				break
+			}
+		}
+
+		if allFound && !opts.keepGuessing {
 			c.Msg("All hashes found")
 			break
 		}
@@ -324,14 +351,17 @@ func run() error {
 	optWorkersHint := argp.Int("w", "workers", &argparse.Option{
 		Help: "hint to number of workers; increasing this to ~5000+/- may speed up the tuning process, but can also worsen performance significantly; very dependent on your system and pattern",
 	})
+	optTimeoutStr := argp.String("T", "timeout", &argparse.Option{
+		Help: "stop cracking after specified duration (e.g. 30s, 2h45m, 3.5h etc.)",
+	})
+	optKeepGuessing := argp.Flag("", "keep-guessing", &argparse.Option{
+		Help: "continue guessing even after all hashes are found",
+	})
 	optCpuProfile := argp.Flag("", "debug-cpuprofile", &argparse.Option{
 		Help: "(debug) write CPU profile to file cpu.prof",
 	})
 	optWriteClCode := argp.Flag("", "debug-oclcode", &argparse.Option{
 		Help: "(debug) write generated OpenCL code to file kernel.cl",
-	})
-	optKeepGuessing := argp.Flag("", "keep-guessing", &argparse.Option{
-		Help: "continue guessing even after all hashes are found",
 	})
 
 	if err := argp.Parse(nil); err != nil {
@@ -339,6 +369,18 @@ func run() error {
 			return nil
 		}
 		return err
+	}
+
+	var timeout time.Duration
+	if *optTimeoutStr != "" {
+		t, err := time.ParseDuration(*optTimeoutStr)
+		if err != nil {
+			return fmt.Errorf("parsing timeout duration: %w", err)
+		}
+		if t <= 0 {
+			return fmt.Errorf("parsing timeout duration %q: must be positive", *optTimeoutStr)
+		}
+		timeout = t
 	}
 
 	var hashMode pcl.HashMode
@@ -477,7 +519,14 @@ func run() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	newHashes, err := runCracker(ctx, patternSrc, patternFilename, patternRootFs.FS(), hashMode, targetHashes, datalibTargetHashes, *optWorkersHint, *optWriteClCode, *optKeepGuessing)
+	newHashes, err := runCracker(ctx, patternSrc, patternFilename, patternRootFs.FS(), hashMode, crackerOpts{
+		targetHashes:        targetHashes,
+		datalibTargetHashes: datalibTargetHashes,
+		workersHint:         *optWorkersHint,
+		writeClCode:         *optWriteClCode,
+		keepGuessing:        *optKeepGuessing,
+		timeout:             timeout,
+	})
 	if err != nil {
 		return err
 	}
