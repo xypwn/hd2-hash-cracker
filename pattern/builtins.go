@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"iter"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/xypwn/hd2-hash-cracker/util"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 var builtinVars = map[string]IrSegment{}
@@ -66,6 +69,16 @@ func builtinHelperDedupeChoiceOfStrings(choices []IrSegment) []IrSegment {
 	return choices[:j]
 }
 
+func builtinYieldNDuplicates(s string, n int) iter.Seq[string] {
+	return func(yield func(val string) bool) {
+		for range n {
+			if !yield(s) {
+				return
+			}
+		}
+	}
+}
+
 var builtinFuncs = map[string]any{
 	// limit limits the number of choices to at most n, where
 	// n must be a non-negative number.
@@ -121,6 +134,34 @@ var builtinFuncs = map[string]any{
 		return builtinHelperTransformChoiceOfStrings(choices, func(choices iter.Seq2[int, string]) (res []IrSegment, err error) {
 			for _, s := range choices {
 				s := r.ReplaceAllString(s, repl)
+				res = append(res, IrSegmentStr(s))
+			}
+			res = builtinHelperDedupeChoiceOfStrings(res)
+			return
+		})
+	},
+	// For each item, dup duplicates the string n times, inserting the given separator.
+	// eg `#{dup <a|b|c> 2 /} -> <a/a|b/b|c/c>`
+	"dup": func(choices IrSegmentChoice, n, sep string) (IrSegmentChoice, error) {
+		nInt, err := strconv.Atoi(n)
+		if err != nil {
+			return nil, err
+		}
+		return builtinHelperTransformChoiceOfStrings(choices, func(choices iter.Seq2[int, string]) (res []IrSegment, err error) {
+			for _, s := range choices {
+				s := strings.Join(slices.Collect(builtinYieldNDuplicates(s, nInt)), sep)
+				res = append(res, IrSegmentStr(s))
+			}
+			res = builtinHelperDedupeChoiceOfStrings(res)
+			return
+		})
+	},
+	// Convert each item to title case and deduplicate.
+	"title": func(choices IrSegmentChoice) (IrSegmentChoice, error) {
+		caser := cases.Title(language.English)
+		return builtinHelperTransformChoiceOfStrings(choices, func(choices iter.Seq2[int, string]) (res []IrSegment, err error) {
+			for _, s := range choices {
+				s := caser.String(s)
 				res = append(res, IrSegmentStr(s))
 			}
 			res = builtinHelperDedupeChoiceOfStrings(res)
