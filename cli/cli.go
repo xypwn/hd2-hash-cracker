@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-var file = os.Stderr
+var Output = os.Stderr
 
 var status string
 
@@ -19,18 +19,18 @@ func printstatus() {
 	if status == "" {
 		return
 	}
-	file.WriteString(clearln)
-	file.WriteString(cyellow)
-	file.WriteString(status)
-	file.WriteString(creset)
+	Output.WriteString(clearln)
+	Output.WriteString(cyellow)
+	Output.WriteString(status)
+	Output.WriteString(creset)
 }
 
 func print(color string, format string, args ...any) {
-	file.WriteString(clearln)
-	file.WriteString(color)
-	file.WriteString(fmt.Sprintf(format, args...))
-	file.WriteString("\n")
-	file.WriteString(creset)
+	Output.WriteString(clearln)
+	Output.WriteString(color)
+	Output.WriteString(fmt.Sprintf(format, args...))
+	Output.WriteString("\n")
+	Output.WriteString(creset)
 	printstatus()
 }
 

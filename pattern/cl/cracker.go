@@ -17,8 +17,6 @@ type DebugOptions struct {
 	// Treat any guess as valid. Used for testing
 	// index synchronization.
 	AcceptAllAsMatch bool
-	// Set to start at a candidate that isn't the first.
-	InitialTotalIdx int
 }
 
 // Advanced options for the cracker.
@@ -35,6 +33,8 @@ type Options struct {
 	MinMatchBufLen int
 	// Number of tries per worker per dispatch (default: 65536).
 	Tries int
+	// Total starting offset
+	StartIndex int
 
 	// Options meant for debugging and/or testing.
 	// You probably don't need to touch these.
@@ -64,6 +64,7 @@ type Cracker struct {
 	idx                    pattern.SegIdx
 	totalIdx               int
 	lastComputeRunDuration time.Duration
+	lastResumeIndex        int // last index until which was fully checked
 
 	// Precomputed next indices
 	nextIdxsBuf []uint32
@@ -86,7 +87,7 @@ func NewCracker(device cl.DeviceId, prog pattern.Segment, mode HashMode, targetH
 		prog:       prog,
 		idx:        prog.MakeIndex(),
 		opts:       opts,
-		totalIdx:   opts.Debug.InitialTotalIdx,
+		totalIdx:   opts.StartIndex,
 	}
 	defer func() {
 		if err != nil {
@@ -183,12 +184,19 @@ func (c *Cracker) setKernelArgValues() error {
 // TotalIdx returns the total iteration index,
 // which is approximately the number of total
 // strings checked.
+//
+// Use LastResumeIndex for an index until
+// which is guaranteed to be checked.
 func (c *Cracker) TotalIdx() int {
 	return c.totalIdx
 }
 
 func (c *Cracker) LastComputeRunDuration() time.Duration {
 	return c.lastComputeRunDuration
+}
+
+func (c *Cracker) LastResumeIndex() int {
+	return c.lastResumeIndex
 }
 
 // Will be realized once no matches were found in the previous dispatch.
@@ -380,6 +388,10 @@ func (c *Cracker) Dispatch() (matches []string, err error) {
 
 			// Match buffers are only valid if a match was found
 			matches = c.bufs.getMatches()
+		} else {
+			// If we didn't find any match, we can be sure the GPU actually
+			// tried all indices until totalIdx and no worker returned early.
+			c.lastResumeIndex = c.totalIdx
 		}
 	}
 

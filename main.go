@@ -33,8 +33,16 @@ import (
 type crackerOpts struct {
 	// target hashes to be cracked
 	targetHashes []uint64
+	// hashes to ignore (already present in cracked file)
+	ignoreHashes map[string]struct{}
 	// un-splitmixed datalib hashes (only used if mode is datalib)
 	datalibTargetHashes []uint64
+	// don't show progress while cracking
+	noInteractive bool
+	// only check, don't crack
+	checkOnly bool
+	// initial iteration offset
+	startOffset int
 	// optional hint for tuner to more quickly guess optimal number of workers
 	workersHint int
 	// debug: output OpenCL code to file
@@ -75,6 +83,11 @@ func runCracker(ctx context.Context, patternSrc []byte, patternFilename string, 
 	}
 	cli.Print("Pattern compiled successfully (total complexity: %d ≈ %.2e, max length: %d)", prog.Comp, float64(prog.Comp), prog.MaxLen())
 
+	if opts.checkOnly {
+		cli.Print("--check passed, not running cracker")
+		return nil, nil
+	}
+
 	var workerErr error
 	done := make(chan error)
 	go func() {
@@ -105,7 +118,9 @@ loop:
 		if extraStatus != "" {
 			extraStatus = ", " + extraStatus
 		}
-		cli.Status("Progress=%.3f%% (ETA %s), Rate=%s, Last=%q%s", float64(tries)/float64(prog.Comp)*100, etaStr, rateStr, lastStr, extraStatus)
+		if !opts.noInteractive {
+			cli.Status("Progress=%.3f%% (ETA %s), Rate=%s, Last=%q%s", float64(tries)/float64(prog.Comp)*100, etaStr, rateStr, lastStr, extraStatus)
+		}
 
 		for c.triesPerSecondBuf.Len() > 20 {
 			c.triesPerSecondBuf.Read()
@@ -184,8 +199,9 @@ func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, opts crackerOpts
 	c.Msg("Using OpenCL platform %q with device %q", platformName, deviceName)
 
 	crackerOpts := pcl.Options{
-		Workers: max(opts.workersHint/2, 256),
-		Tries:   8192,
+		Workers:    max(opts.workersHint/2, 256),
+		Tries:      8192,
+		StartIndex: opts.startOffset,
 	}
 	tuner := NewTuner(crackerOpts.Workers, crackerOpts.Tries)
 
@@ -241,6 +257,9 @@ func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, opts crackerOpts
 				if _, ok := datalibTargetHashesSet[h]; !ok {
 					continue
 				}
+			}
+			if _, ignore := opts.ignoreHashes[s]; ignore {
+				continue
 			}
 
 			c.mu.Lock()
@@ -304,6 +323,7 @@ func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, opts crackerOpts
 		if opts.timeout > 0 {
 			if dt := time.Since(startTime); dt >= opts.timeout {
 				c.Msg("Timeout reached (ran for %s)", dt)
+				c.Msg("To resume with the same pattern: -s %d", cr.LastResumeIndex())
 				break
 			}
 		}
@@ -314,6 +334,8 @@ func crack(c *cracker, prog pattern.Segment, mode pcl.HashMode, opts crackerOpts
 		}
 
 		if c.ctx.Err() != nil {
+			c.Msg("Cracker canceled")
+			c.Msg("To resume with the same pattern: -s %d", cr.LastResumeIndex())
 			return err
 		}
 	}
@@ -357,6 +379,16 @@ func run() error {
 	optKeepGuessing := argp.Flag("", "keep-guessing", &argparse.Option{
 		Help: "continue guessing even after all hashes are found",
 	})
+	optNoInteractive := argp.Flag("I", "no-interactive", &argparse.Option{
+		Help: "don't show any progress while cracking and print everything to stdout; useful if output should be machine-processed",
+	})
+	optCheck := argp.Flag("c", "check", &argparse.Option{
+		Help: "only compile and check pattern, don't run the cracker",
+	})
+	optOffset := argp.Int("s", "start-offset", &argparse.Option{
+		Default: "0",
+		Help:    "start at given iteration (see output after cancel/timeout for exact value)",
+	})
 	optCpuProfile := argp.Flag("", "debug-cpuprofile", &argparse.Option{
 		Help: "(debug) write CPU profile to file cpu.prof",
 	})
@@ -369,6 +401,10 @@ func run() error {
 			return nil
 		}
 		return err
+	}
+
+	if *optNoInteractive {
+		cli.Output = os.Stdout
 	}
 
 	var timeout time.Duration
@@ -515,13 +551,50 @@ func run() error {
 		}
 	}
 
+	outputFile := *optOutput
+	if outputFile == "" {
+		switch hashMode {
+		case pcl.HashMurmur64a:
+			outputFile = "cracked.txt"
+		case pcl.HashMurmur64aThin:
+			outputFile = "cracked_thin.txt"
+		case pcl.HashDatalib:
+			outputFile = "cracked_datalib.txt"
+		}
+	}
+	// Read hashes currently in output file
+	outputFileHashes := make(map[string]struct{})
+	{
+		b, err := os.ReadFile(outputFile)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		var lines [][]byte
+		if b != nil {
+			lines = bytes.Split(b, []byte("\n"))
+			for i := range lines {
+				lines[i] = bytes.TrimSuffix(lines[i], []byte("\r"))
+			}
+			for _, line := range lines {
+				if len(line) == 0 {
+					continue
+				}
+				outputFileHashes[string(line)] = struct{}{}
+			}
+		}
+	}
+
 	cli.Print("Ctrl+C to quit")
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
 	newHashes, err := runCracker(ctx, patternSrc, patternFilename, patternRootFs.FS(), hashMode, crackerOpts{
 		targetHashes:        targetHashes,
+		ignoreHashes:        outputFileHashes,
 		datalibTargetHashes: datalibTargetHashes,
+		noInteractive:       *optNoInteractive,
+		checkOnly:           *optCheck,
+		startOffset:         *optOffset,
 		workersHint:         *optWorkersHint,
 		writeClCode:         *optWriteClCode,
 		keepGuessing:        *optKeepGuessing,
@@ -533,32 +606,10 @@ func run() error {
 
 	// Write back new hash strings to output file by appending and deduplicating
 	{
-		outputFile := *optOutput
-		if outputFile == "" {
-			switch hashMode {
-			case pcl.HashMurmur64a:
-				outputFile = "cracked.txt"
-			case pcl.HashMurmur64aThin:
-				outputFile = "cracked_thin.txt"
-			case pcl.HashDatalib:
-				outputFile = "cracked_datalib.txt"
-			}
-		}
 		cli.Print("Adding %d hashes to %s", len(newHashes), outputFile)
-		b, err := os.ReadFile(outputFile)
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
 		var lines [][]byte
-		if b != nil {
-			lines = bytes.Split(b, []byte("\n"))
-			for i := range lines {
-				lines[i] = bytes.TrimSuffix(lines[i], []byte("\r"))
-			}
-			lines = slices.DeleteFunc(lines, func(b []byte) bool { return len(b) == 0 })
-		}
-		for _, h := range newHashes {
-			lines = append(lines, []byte(h))
+		for s := range outputFileHashes {
+			lines = append(lines, []byte(s))
 		}
 		slices.SortFunc(lines, bytes.Compare)
 		lines = util.UniqFunc(lines, bytes.Equal)

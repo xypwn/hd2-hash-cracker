@@ -82,7 +82,7 @@ func TestCl(t *testing.T) {
 		},
 		{
 			"index",
-			pcl.Options{Workers: 1, MinMatchBufLen: 1, Tries: 4, Debug: pcl.DebugOptions{InitialTotalIdx: 456}},
+			pcl.Options{Workers: 1, MinMatchBufLen: 1, Tries: 4, StartIndex: 456},
 			"<[0-7]|8|9>{3}",
 			pattern.CompileOptions{NoOptimize: true},
 			pcl.HashMurmur64a,
