@@ -611,6 +611,9 @@ func run() error {
 		for s := range outputFileHashes {
 			lines = append(lines, []byte(s))
 		}
+		for _, s := range newHashes {
+			lines = append(lines, []byte(s))
+		}
 		slices.SortFunc(lines, bytes.Compare)
 		lines = util.UniqFunc(lines, bytes.Equal)
 		if err := os.WriteFile(outputFile, bytes.Join(lines, []byte("\n")), 0666); err != nil {
